@@ -1,0 +1,170 @@
+/* ── Design tokens ── */
+:root {
+  --bg:           #0A0A0F;
+  --surface:      #1C1C2E;
+  --surface2:     #252538;
+  --surface3:     #2E2E45;
+  --border:       rgba(255, 255, 255, 0.08);
+  --border-light: rgba(255, 255, 255, 0.14);
+
+  --accent:       #6C63FF;
+  --accent-dim:   rgba(108, 99, 255, 0.18);
+  --danger:       #FF453A;
+  --danger-dim:   rgba(255, 69, 58, 0.18);
+  --success:      #30D158;
+  --success-dim:  rgba(48, 209, 88, 0.18);
+  --warning:      #FFD60A;
+  --warning-dim:  rgba(255, 214, 10, 0.18);
+  --info:         #64D2FF;
+  --info-dim:     rgba(100, 210, 255, 0.18);
+  --purple:       #BF5AF2;
+  --purple-dim:   rgba(191, 90, 242, 0.18);
+  --orange:       #FF9F0A;
+  --orange-dim:   rgba(255, 159, 10, 0.18);
+
+  --text:         #FFFFFF;
+  --text-2:       #A0A0B8;
+  --text-3:       #606078;
+
+  --radius:       16px;
+  --radius-sm:    10px;
+  --radius-lg:    24px;
+
+  --nav-height:   56px;
+  --header-height: 56px;
+
+  /* Safe areas */
+  --sat: env(safe-area-inset-top,    0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left,   0px);
+  --sar: env(safe-area-inset-right,  0px);
+}
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+               "Helvetica Neue", Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100dvh;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Scrollable areas ── */
+.scroll-area {
+  -webkit-overflow-scrolling: touch;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+}
+
+/* ── Typography ── */
+h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+h2 { font-size: 22px; font-weight: 600; }
+h3 { font-size: 17px; font-weight: 600; }
+
+/* ── Glass card ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 24px;
+  border-radius: var(--radius);
+  font-size: 16px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.12s, opacity 0.12s;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn:active { transform: scale(0.96); opacity: 0.85; }
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+}
+.btn-ghost {
+  background: var(--surface2);
+  color: var(--text);
+}
+.btn-danger {
+  background: var(--danger-dim);
+  color: var(--danger);
+}
+.btn-full { width: 100%; }
+
+/* ── Chip / badge ── */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ── Divider ── */
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0 -16px;
+}
+
+/* ── Utility ── */
+.text-2    { color: var(--text-2); }
+.text-3    { color: var(--text-3); }
+.text-sm   { font-size: 13px; }
+.text-xs   { font-size: 11px; }
+.mt-auto   { margin-top: auto; }
+.flex      { display: flex; }
+.flex-col  { flex-direction: column; }
+.items-center { align-items: center; }
+.gap-2    { gap: 8px; }
+.gap-3    { gap: 12px; }
+.gap-4    { gap: 16px; }
+.w-full   { width: 100%; }
+.truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ── Fade-in animation ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fadeUp 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
+
+/* ── Skeleton loader ── */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: var(--radius-sm);
+}
