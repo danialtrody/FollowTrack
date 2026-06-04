@@ -1,89 +1,70 @@
 # FollowTrack
 
-Analyze your Instagram followers from manually exported JSON data.  
-No API. No scraping. Your data stays local.
+Track who unfollows you on Instagram — using your own data export. No API, no login, no server required.
+
+Every user's data lives entirely in their own browser. Nothing is sent to a server or stored anywhere else.
 
 ---
 
-## Quick Start
+## What it does
 
-### 1. Backend (Python FastAPI)
+- **Lost Followers** — see who unfollowed you since your last upload
+- **New Followers** — see who started following you
+- **Not Following Back** — accounts you follow that don't follow you back
+- **Ghost Account Scanner** — detects private, deactivated, or deleted accounts in your following list
+- **Snapshot History** — upload multiple exports over time and track changes
+- **User Timeline** — see the full follow/unfollow history for any specific user
+- **Search** — find any user by username across all your snapshots
 
+---
+
+## How to use
+
+### Step 1 — Export your Instagram data
+
+1. Open Instagram → **Profile** → ☰ Menu
+2. **Settings** → **Your activity** → **Download your information**
+3. Select **"Followers and following"**
+4. Choose **JSON** format → **Request download**
+5. Wait for the email from Instagram, download the ZIP
+
+### Step 2 — Upload
+
+Open the app, tap **Upload**, select your ZIP. That's it.
+
+Upload again later to see what changed.
+
+---
+
+## How data is stored
+
+Your data never leaves your device. Everything is saved in your browser's IndexedDB (local storage). Clearing browser data will erase your history.
+
+The backend only handles one thing: when you run the **ghost account scanner**, it makes HTTP requests to Instagram to check if accounts are active — no data is stored server-side.
+
+---
+
+## Tech stack
+
+- **Frontend**: React 18 · Vite · IndexedDB (idb) · JSZip
+- **Backend**: Python 3.11 · FastAPI · httpx (account checker only)
+
+---
+
+## Run locally
+
+**Backend:**
 ```bash
 cd backend
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
-The API will be available at `http://localhost:8000`.  
-The SQLite database is created automatically at `data/followtrack.db`.
-
-### 2. Frontend (React + Vite)
-
+**Frontend:**
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-Open `http://localhost:5173` in your browser.
-
----
-
-## How to Export Instagram Data (iPhone)
-
-1. Open Instagram → **Profile** → ☰ Menu
-2. **Settings and privacy** → **Your activity** → **Download your information**
-3. Select **"Followers and following"**
-4. Choose **JSON** format → **Request download**
-5. Download the ZIP from your email
-6. Upload the ZIP on the Upload page
-
----
-
-## Features
-
-| Category | Description |
-|----------|-------------|
-| Lost Followers | People who unfollowed you since last upload |
-| New Followers | People who started following you |
-| Not Following Back | They follow you, you don't follow them |
-| You Don't Follow Back | You follow them, they don't follow you |
-| Re-followers | People who unfollowed then re-followed |
-| Blocked Profiles | Accounts you've blocked |
-| Pending Requests | Follow requests you sent but not accepted |
-| Recently Unfollowed | Accounts you recently unfollowed (Instagram's native list) |
-| Follow Requests Received | People waiting for your approval |
-| User History | Full follow/unfollow timeline per user |
-
----
-
-## Tech Stack
-
-- **Backend**: Python 3.11+ · FastAPI · SQLAlchemy · SQLite
-- **Frontend**: React 18 · Vite · React Router
-
----
-
-## Project Structure
-
-```
-FollowTrack/
-├── backend/
-│   ├── app/
-│   │   ├── main.py              # FastAPI entry point
-│   │   ├── database.py          # SQLAlchemy + SQLite setup
-│   │   ├── models.py            # ORM models
-│   │   ├── schemas.py           # Pydantic schemas
-│   │   ├── routers/             # upload / analysis / users
-│   │   └── services/            # parser / snapshot / analysis logic
-│   └── requirements.txt
-├── frontend/
-│   ├── src/
-│   │   ├── api/client.js        # All API calls
-│   │   ├── components/          # Shared UI components
-│   │   └── pages/               # Upload / Dashboard / History / Search
-│   └── package.json
-└── data/
-    └── followtrack.db           # Auto-created SQLite database
-```
+Open `http://localhost:5173`.
