@@ -16,3 +16,4 @@ data/
 # Misc
 .env
 *.db
+.vscode/
