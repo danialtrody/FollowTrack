@@ -2,7 +2,7 @@
 
 Know exactly who unfollowed you, who you follow that doesn't follow back, and which accounts in your list have gone ghost — all using your own Instagram data export. No login. No API. No tracking.
 
-**Live demo:** [followtrack.app](https://followtrack.app)
+**Live demo:** [followtrack.app](https://followtrack-xs57.onrender.com)
 
 ---
 
