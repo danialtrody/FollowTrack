@@ -1,39 +1,56 @@
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft } from 'lucide-react'
+import { ChevronLeft, Users } from 'lucide-react'
 
-export default function PageHeader({ title, back, right }) {
+export default function PageHeader({ title, back, right, showLogo }) {
   const navigate = useNavigate()
+
   return (
-    <header style={{
-      height: 'var(--header-height)',
-      paddingTop: 'var(--sat)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: `var(--sat) 16px 0`,
-      flexShrink: 0,
-      minHeight: 'calc(var(--header-height) + var(--sat))',
-    }}>
+    <header className="page-header">
+      {/* Left slot */}
       {back ? (
         <button
           onClick={() => navigate(-1)}
           style={{
             background: 'var(--surface2)',
-            border: 'none',
-            borderRadius: 10,
-            width: 36, height: 36,
+            border: '1px solid var(--border)',
+            borderRadius: 12,
+            width: 38, height: 38,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             color: 'var(--text)',
             cursor: 'pointer',
+            transition: 'background var(--t-fast)',
+            flexShrink: 0,
           }}
+          onPointerEnter={e => e.currentTarget.style.background = 'var(--surface3)'}
+          onPointerLeave={e => e.currentTarget.style.background = 'var(--surface2)'}
         >
-          <ChevronLeft size={20} />
+          <ChevronLeft size={20} strokeWidth={2} />
         </button>
-      ) : <div style={{ width: 36 }} />}
+      ) : showLogo ? (
+        <div className="page-header-logo">
+          <div className="page-header-logo-icon">
+            <Users size={15} color="#fff" strokeWidth={2.5} />
+          </div>
+          <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: '-0.4px', background: 'var(--grad-accent)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+            FollowTrack
+          </span>
+        </div>
+      ) : (
+        <div style={{ width: 38 }} />
+      )}
 
-      <h1 style={{ fontSize: 17, fontWeight: 700, letterSpacing: '-0.2px' }}>{title}</h1>
+      {/* Center title — hidden when logo is shown */}
+      {!showLogo && (
+        <h1 style={{ fontSize: 16, fontWeight: 700, letterSpacing: '-0.3px', color: 'var(--text)' }}>
+          {title}
+        </h1>
+      )}
+      {showLogo && <div />}
 
-      <div style={{ width: 36, display: 'flex', justifyContent: 'flex-end' }}>{right || null}</div>
+      {/* Right slot */}
+      <div style={{ width: 38, display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
+        {right || null}
+      </div>
     </header>
   )
 }

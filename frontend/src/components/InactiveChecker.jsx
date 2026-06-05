@@ -1,50 +1,40 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { ScanSearch, X, ChevronRight } from 'lucide-react'
+import { ScanSearch, X, ChevronRight, RotateCcw } from 'lucide-react'
 import BottomSheet from './BottomSheet'
 import UserRow     from './UserRow'
-import { getLatestSnapshot, getUserStatuses, updateUsersStatus } from '../lib/db'
-import { startCheck, getCheckStatus, cancelCheck }               from '../api/client'
+import { useApp }  from '../AppContext'
+import { startCheck, getCheckStatus, cancelCheck } from '../api/client'
 
-export default function InactiveChecker({ totalFollowing, onScanDone }) {
+export default function InactiveChecker({ totalFollowing }) {
+  const { latestSnapshot, statuses, updateStatuses } = useApp()
   const [phase,     setPhase]     = useState('idle')
   const [job,       setJob]       = useState(null)
   const [jobId,     setJobId]     = useState(null)
   const [inactive,  setInactive]  = useState([])
   const [sheetOpen, setSheetOpen] = useState(false)
-  const pollRef  = useRef(null)
-  const navigate = useNavigate()
+  const pollRef = useRef(null)
 
-  // Load any already-classified inactive accounts on mount
   useEffect(() => {
-    async function loadExisting() {
-      const [snap, statuses] = await Promise.all([getLatestSnapshot(), getUserStatuses()])
-      if (!snap) return
-      const followerSet = new Set(snap.followers.map(u => u.username))
-      const items = snap.following.filter(u =>
-        !followerSet.has(u.username) && statuses[u.username] === 'private_or_inactive'
-      ).map(u => ({ username: u.username, status: 'private_or_inactive' }))
-      if (items.length) { setInactive(items); setPhase('done') }
-    }
-    loadExisting().catch(() => {})
-  }, [])
+    if (!latestSnapshot) return
+    const followerSet = new Set(latestSnapshot.followers.map(u => u.username))
+    const existing = latestSnapshot.following.filter(u =>
+      !followerSet.has(u.username) && statuses[u.username] === 'private_or_inactive'
+    ).map(u => ({ username: u.username, status: 'private_or_inactive' }))
+    if (existing.length) { setInactive(existing); setPhase('done') }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function startScan() {
+    if (!latestSnapshot) return
     try {
-      const [snap, statuses] = await Promise.all([getLatestSnapshot(), getUserStatuses()])
-      if (!snap) return
+      const followerSet = new Set(latestSnapshot.followers.map(u => u.username))
 
-      const followerSet = new Set(snap.followers.map(u => u.username))
-
-      // Mark mutual followers as active instantly — no HTTP needed
       const mutualStatus = {}
-      for (const u of snap.following) {
+      for (const u of latestSnapshot.following) {
         if (followerSet.has(u.username)) mutualStatus[u.username] = 'active_public'
       }
-      if (Object.keys(mutualStatus).length) await updateUsersStatus(mutualStatus)
+      if (Object.keys(mutualStatus).length) updateStatuses(mutualStatus)
 
-      // HTTP check for non-mutuals (skip already-deleted)
-      const toCheck = snap.following
+      const toCheck = latestSnapshot.following
         .filter(u => !followerSet.has(u.username) && statuses[u.username] !== 'deleted')
         .map(u => u.username)
 
@@ -65,18 +55,16 @@ export default function InactiveChecker({ totalFollowing, onScanDone }) {
 
       if (data.status === 'done' || data.status === 'blocked') {
         clearInterval(pollRef.current)
-        if (data.results) await updateUsersStatus(data.results)
-
-        const [snap, freshStatuses] = await Promise.all([getLatestSnapshot(), getUserStatuses()])
-        if (snap) {
-          const followerSet = new Set(snap.followers.map(u => u.username))
-          const items = snap.following.filter(u =>
-            !followerSet.has(u.username) && freshStatuses[u.username] === 'private_or_inactive'
+        if (data.results) {
+          updateStatuses(data.results)
+          const merged = { ...statuses, ...data.results }
+          const followerSet = new Set(latestSnapshot.followers.map(u => u.username))
+          const items = latestSnapshot.following.filter(u =>
+            !followerSet.has(u.username) && merged[u.username] === 'private_or_inactive'
           ).map(u => ({ username: u.username, status: 'private_or_inactive' }))
           setInactive(items)
         }
         setPhase(data.status === 'blocked' ? 'blocked' : 'done')
-        if (onScanDone) onScanDone()
       } else if (data.status === 'error' || data.status === 'cancelled') {
         clearInterval(pollRef.current)
         setPhase(data.status)
@@ -92,70 +80,79 @@ export default function InactiveChecker({ totalFollowing, onScanDone }) {
     setPhase('idle'); setJob(null)
   }
 
+  function reset() { setPhase('idle'); setJob(null) }
+
   useEffect(() => () => clearInterval(pollRef.current), [])
 
   const pct = job ? Math.round((job.checked / Math.max(job.total, 1)) * 100) : 0
 
+  const title = {
+    idle:      'Find Ghost Accounts',
+    running:   `Scanning… ${pct}%`,
+    done:      `${inactive.length} inactive account${inactive.length !== 1 ? 's' : ''} found`,
+    blocked:   `Partially checked — ${inactive.length} inactive found`,
+    error:     'Scan failed',
+    cancelled: 'Scan cancelled',
+  }[phase]
+
+  const subtitle = {
+    idle:      "Checks non-mutual follows for private or deactivated accounts",
+    running:   `${job?.checked ?? 0} / ${job?.total ?? totalFollowing} accounts checked`,
+    done:      inactive.length ? 'Tap arrow to view the list' : 'All following accounts are active',
+    blocked:   `Rate-limited by Instagram after ${job?.checked ?? '?'} checks — partial results saved`,
+    error:     'Checker backend may be offline — try again later',
+    cancelled: 'Scan was cancelled',
+  }[phase]
+
   return (
     <>
-      <div style={{
-        background: 'var(--surface)', border: '1px solid var(--border)',
-        borderRadius: 'var(--radius)', padding: '16px', marginBottom: 12,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: phase === 'running' ? 12 : 0 }}>
-          <div style={{
-            width: 38, height: 38, borderRadius: 12,
-            background: 'var(--accent-dim)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-          }}>
-            <ScanSearch size={20} color="var(--accent)" />
+      <div className="checker-card">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 13, marginBottom: phase === 'running' ? 14 : 0 }}>
+          {/* Icon */}
+          <div className="checker-icon">
+            <ScanSearch size={19} color="var(--accent)" strokeWidth={2} />
           </div>
 
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 14, fontWeight: 700 }}>
-              {phase === 'idle'      && 'Find Ghost Accounts'}
-              {phase === 'running'   && `Checking accounts… ${pct}%`}
-              {phase === 'done'      && `${inactive.length} inactive account${inactive.length !== 1 ? 's' : ''} found`}
-              {phase === 'blocked'   && `Partially checked — ${inactive.length} inactive found`}
-              {phase === 'error'     && `Check failed`}
-              {phase === 'cancelled' && 'Check cancelled'}
+          {/* Text */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>
+              {title}
             </div>
-            <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2 }}>
-              {phase === 'idle'    && `Checks accounts you follow who don't follow back — skips mutual follows`}
-              {phase === 'running' && `${job?.checked ?? 0} / ${job?.total ?? totalFollowing} checked`}
-              {phase === 'done'    && (inactive.length ? 'Tap to see the list' : 'All clear!')}
-              {phase === 'blocked' && `Instagram rate-limited after ${job?.checked ?? '?'} checks — partial results saved`}
-              {phase === 'error'   && 'Something went wrong — checker backend may be offline'}
+            <div style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.4 }}>
+              {subtitle}
             </div>
           </div>
 
-          {phase === 'idle' && (
-            <button onClick={startScan} style={btn('var(--accent)')}>Scan</button>
-          )}
-          {phase === 'running' && (
-            <button onClick={cancel} style={btn('var(--danger)')}><X size={14} /></button>
-          )}
-          {(phase === 'done' || phase === 'blocked') && inactive.length > 0 && (
-            <button onClick={() => setSheetOpen(true)} style={btn('var(--accent)')}><ChevronRight size={16} /></button>
-          )}
-          {['done', 'blocked', 'cancelled', 'error'].includes(phase) && (
-            <button onClick={() => { setPhase('idle'); setJob(null) }} style={{ ...btn('var(--surface2)'), color: 'var(--text-2)', marginLeft: 4 }}>
-              Retry
-            </button>
-          )}
+          {/* Action buttons */}
+          <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+            {phase === 'idle' && (
+              <ActionBtn onClick={startScan} label="Scan" color="var(--accent)" />
+            )}
+            {phase === 'running' && (
+              <IconBtn onClick={cancel} icon={<X size={14} strokeWidth={2.5} />} color="var(--danger-dim)" textColor="var(--danger)" />
+            )}
+            {(phase === 'done' || phase === 'blocked') && inactive.length > 0 && (
+              <IconBtn onClick={() => setSheetOpen(true)} icon={<ChevronRight size={16} strokeWidth={2.5} />} color="var(--accent-dim)" textColor="var(--accent-2)" />
+            )}
+            {['done', 'blocked', 'cancelled', 'error'].includes(phase) && (
+              <IconBtn onClick={reset} icon={<RotateCcw size={13} strokeWidth={2.5} />} color="var(--surface2)" textColor="var(--text-2)" />
+            )}
+          </div>
         </div>
 
+        {/* Progress bar */}
         {phase === 'running' && job && (
-          <div style={{ height: 4, background: 'var(--surface2)', borderRadius: 2, overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${pct}%`, background: 'var(--accent)', borderRadius: 2, transition: 'width 0.4s ease' }} />
+          <div className="progress-track">
+            <div className="progress-fill" style={{ width: `${pct}%` }} />
           </div>
         )}
       </div>
 
+      {/* Results sheet */}
       <BottomSheet open={sheetOpen} onClose={() => setSheetOpen(false)} title="👻 Inactive Accounts" color="var(--text-3)">
-        <div style={{ padding: '8px 20px 12px', borderBottom: '1px solid var(--border)' }}>
-          <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.5 }}>
-            These accounts appear private or deactivated. They still count in your following number but aren't visible on Instagram.
+        <div style={{ padding: '12px 20px 14px', borderBottom: '1px solid var(--border)' }}>
+          <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.6 }}>
+            These accounts appear private or deactivated — they still count in your following total but aren't publicly visible.
           </p>
         </div>
         {inactive.map(item => (
@@ -163,8 +160,8 @@ export default function InactiveChecker({ totalFollowing, onScanDone }) {
             key={item.username}
             username={item.username}
             badge="Private / Inactive"
-            badgeColor="var(--text-3)"
-            onClick={() => { setSheetOpen(false); navigate(`/history/${item.username}`) }}
+            badgeColor="var(--warning)"
+            onClick={() => setSheetOpen(false)}
           />
         ))}
       </BottomSheet>
@@ -172,12 +169,45 @@ export default function InactiveChecker({ totalFollowing, onScanDone }) {
   )
 }
 
-function btn(bg) {
-  return {
-    background: bg, border: 'none', borderRadius: 10,
-    padding: '7px 14px', fontSize: 13, fontWeight: 700,
-    color: '#fff', cursor: 'pointer',
-    display: 'flex', alignItems: 'center', gap: 4,
-    flexShrink: 0, WebkitTapHighlightColor: 'transparent',
-  }
+function ActionBtn({ onClick, label, color }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        background: color, border: 'none', borderRadius: 10,
+        padding: '8px 16px', fontSize: 13, fontWeight: 700,
+        color: '#fff', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', gap: 4,
+        flexShrink: 0, WebkitTapHighlightColor: 'transparent',
+        boxShadow: '0 4px 16px var(--accent-glow)',
+        transition: 'transform 0.12s, box-shadow 0.12s',
+      }}
+      onPointerDown={e => e.currentTarget.style.transform = 'scale(0.94)'}
+      onPointerUp={e   => e.currentTarget.style.transform = 'scale(1)'}
+      onPointerLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+    >
+      {label}
+    </button>
+  )
+}
+
+function IconBtn({ onClick, icon, color, textColor }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        background: color, border: 'none', borderRadius: 10,
+        width: 34, height: 34,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: textColor, cursor: 'pointer',
+        flexShrink: 0, WebkitTapHighlightColor: 'transparent',
+        transition: 'transform 0.12s, background 0.12s',
+      }}
+      onPointerDown={e => e.currentTarget.style.transform = 'scale(0.9)'}
+      onPointerUp={e   => e.currentTarget.style.transform = 'scale(1)'}
+      onPointerLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+    >
+      {icon}
+    </button>
+  )
 }

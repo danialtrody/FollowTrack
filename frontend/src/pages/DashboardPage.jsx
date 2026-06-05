@@ -1,234 +1,198 @@
-import { useState, useEffect, useCallback } from 'react'
-import { RefreshCw } from 'lucide-react'
-import PageHeader      from '../components/PageHeader'
-import BottomSheet     from '../components/BottomSheet'
-import UserRow         from '../components/UserRow'
-import EmptyState      from '../components/EmptyState'
-import InactiveChecker from '../components/InactiveChecker'
-import { getLatestSnapshot, getPreviousSnapshot, listSnapshots, getUserStatuses } from '../lib/db'
-import { computeDiff, getNotFollowingBack, getPendingSent,
-         getFollowersList, getFollowingList }                                      from '../lib/analysis'
+import { useState } from 'react'
+import { ChevronRight } from 'lucide-react'
+import { useApp }        from '../AppContext'
+import PageHeader        from '../components/PageHeader'
+import BottomSheet       from '../components/BottomSheet'
+import UserRow           from '../components/UserRow'
+import EmptyState        from '../components/EmptyState'
+import InactiveChecker   from '../components/InactiveChecker'
+import { getNotFollowingBack, getPendingSent,
+         getFollowersList, getFollowingList }   from '../lib/analysis'
 
 const CARDS = [
   {
-    key: 'not_following_back',
-    label: 'Not Following Back',
-    desc: 'You follow them · they don\'t follow you',
-    icon: '👻',
-    color: 'var(--danger)',
-    dimColor: 'var(--danger-dim)',
-    badge: "Doesn't follow back",
+    key:        'not_following_back',
+    label:      'Not Following Back',
+    desc:       "You follow them · they don't follow back",
+    emoji:      '👻',
+    color:      'var(--danger)',
+    dimColor:   'var(--danger-dim)',
+    grad:       'linear-gradient(135deg, rgba(185,28,28,0.12) 0%, rgba(248,113,113,0.06) 100%)',
+    borderCol:  'rgba(248,113,113,0.22)',
+    badge:      "Doesn't follow back",
     badgeColor: 'var(--danger)',
-    dataKey: 'not_following_back',
   },
   {
-    key: 'unfollowers',
-    label: 'Lost Followers',
-    desc: 'Removed you since last upload',
-    icon: '💔',
-    color: 'var(--warning)',
-    dimColor: 'var(--warning-dim)',
-    badge: 'Unfollowed you',
-    badgeColor: 'var(--warning)',
-    dataKey: 'unfollowers',
-  },
-  {
-    key: 'pending_sent',
-    label: 'Pending Requests',
-    desc: 'You sent a request · not accepted yet',
-    icon: '⏳',
-    color: 'var(--accent)',
-    dimColor: 'var(--accent-dim)',
-    badge: 'Pending',
+    key:        'pending_sent',
+    label:      'Pending Requests',
+    desc:       "You sent a request · not accepted yet",
+    emoji:      '⏳',
+    color:      'var(--accent)',
+    dimColor:   'var(--accent-dim)',
+    grad:       'linear-gradient(135deg, rgba(109,40,217,0.12) 0%, rgba(139,92,246,0.06) 100%)',
+    borderCol:  'rgba(139,92,246,0.22)',
+    badge:      'Pending',
     badgeColor: 'var(--accent)',
-    extra: true,
+    extra:      true,
   },
 ]
 
 export default function DashboardPage() {
-  const [diff,        setDiff]        = useState(null)
-  const [stats,       setStats]       = useState(null)
-  const [pending,     setPending]     = useState([])
-  const [loading,     setLoading]     = useState(true)
-  const [sheet,       setSheet]       = useState(null)
-  const [listSheet,   setListSheet]   = useState(null)
-  const [listItems,   setListItems]   = useState([])
-  const [listLoading, setListLoading] = useState(false)
+  const { latestSnapshot, statuses } = useApp()
+  const [sheet,     setSheet]     = useState(null)
+  const [listSheet, setListSheet] = useState(null)
+  const [listItems, setListItems] = useState([])
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const [snap, allSnaps, statuses] = await Promise.all([
-        getLatestSnapshot(),
-        listSnapshots(),
-        getUserStatuses(),
-      ])
-
-      if (!snap) {
-        setStats(null); setDiff(null); setPending([])
-        return
-      }
-
-      const prevSnap = await getPreviousSnapshot(snap.id)
-      const diffResult = prevSnap
-        ? computeDiff(prevSnap, snap, statuses)
-        : { new_followers: [], unfollowers: [], not_following_back: getNotFollowingBack(snap, statuses) }
-
-      setDiff(diffResult)
-      setStats({
-        latest_followers:    snap.followers_count,
-        latest_following:    getFollowingList(snap, statuses).length,
-        latest_snapshot_at:  snap.uploaded_at,
-        total_snapshots:     allSnaps.length,
-      })
-      setPending(getPendingSent(snap))
-    } catch {
-      /* no data */
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => { load() }, [load])
-
-  function getItems(card) {
-    if (card.extra) return pending
-    return diff?.[card.dataKey] ?? []
-  }
-
-  function openCard(card) {
-    setSheet({
-      title: `${card.icon} ${card.label}`,
-      color: card.color,
-      badge: card.badge,
-      badgeColor: card.badgeColor,
-      items: getItems(card),
-    })
-  }
-
-  async function openList(type) {
-    setListSheet(type)
-    setListLoading(true)
-    setListItems([])
-    try {
-      const [snap, statuses] = await Promise.all([getLatestSnapshot(), getUserStatuses()])
-      if (snap) {
-        setListItems(type === 'followers' ? getFollowersList(snap) : getFollowingList(snap, statuses))
-      }
-    } catch { setListItems([]) }
-    finally  { setListLoading(false) }
-  }
-
-  if (loading) return <Skeleton />
-
-  if (!stats?.latest_snapshot_at) {
+  if (!latestSnapshot) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh' }}>
+      <div className="page-root">
         <PageHeader title="Dashboard" />
-        <EmptyState icon="📂" title="No data yet" sub="Upload your Instagram ZIP export to get started." />
+        <EmptyState
+          icon="📂"
+          title="No data yet"
+          sub="Upload your Instagram ZIP export to get started."
+        />
       </div>
     )
   }
 
+  const snap    = latestSnapshot
+  const nfb     = getNotFollowingBack(snap, statuses)
+  const pending = getPendingSent(snap)
+
+  const followersCount = snap.followers_count
+  const followingCount = getFollowingList(snap, statuses).length
+
+  function getItems(card) {
+    return card.extra ? pending : nfb
+  }
+
+  function openCard(card) {
+    setSheet({
+      title:      `${card.emoji} ${card.label}`,
+      color:      card.color,
+      badge:      card.badge,
+      badgeColor: card.badgeColor,
+      items:      getItems(card),
+    })
+  }
+
+  function openList(type) {
+    setListSheet(type)
+    setListItems(type === 'followers' ? getFollowersList(snap) : getFollowingList(snap, statuses))
+  }
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh' }}>
-      <PageHeader
-        title="Dashboard"
-        right={
-          <button onClick={load} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-2)', padding: 4 }}>
-            <RefreshCw size={18} />
-          </button>
-        }
-      />
+    <div className="page-root">
+      <PageHeader title="Dashboard" />
 
-      <div className="scroll-area" style={{
-        flex: 1, padding: '16px',
-        paddingBottom: 'calc(var(--nav-height) + var(--sab) + 16px)',
-        overflowY: 'auto',
-      }}>
+      <div className="page-scroll scroll-area">
+        <div className="page-inner">
 
-        {/* Stats strip */}
-        <div style={{
-          background: 'var(--surface)', border: '1px solid var(--border)',
-          borderRadius: 'var(--radius)', marginBottom: 16, overflow: 'hidden',
-        }}>
-          <div style={{ display: 'flex' }}>
-            <StatBtn label="Followers" value={stats.latest_followers} color="var(--success)" onClick={() => openList('followers')} />
-            <div style={{ width: 1, background: 'var(--border)' }} />
-            <StatBtn label="Following" value={stats.latest_following} color="var(--accent)"  onClick={() => openList('following')} />
+          {/* ── Stat bar ── */}
+          <div className="stat-bar fade-up">
+            <button className="stat-card-btn" onClick={() => openList('followers')}>
+              <span className="stat-number" style={{
+                background: 'var(--grad-success)',
+                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+              }}>
+                {followersCount.toLocaleString()}
+              </span>
+              <span className="stat-label">Followers</span>
+            </button>
+
+            <button className="stat-card-btn" onClick={() => openList('following')}>
+              <span className="stat-number" style={{
+                background: 'var(--grad-accent)',
+                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+              }}>
+                {followingCount.toLocaleString()}
+              </span>
+              <span className="stat-label">Following</span>
+            </button>
           </div>
-        </div>
 
-        {/* Ghost account scanner */}
-        <InactiveChecker totalFollowing={stats.latest_following} onScanDone={load} />
+          {/* ── Ghost account scanner ── */}
+          <div className="fade-up" style={{ animationDelay: '60ms' }}>
+            <InactiveChecker totalFollowing={followingCount} />
+          </div>
 
-        {/* Cards */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {CARDS.map(card => {
-            const items = getItems(card)
-            const count = items.length
-            return (
-              <button
-                key={card.key}
-                onClick={() => openCard(card)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 16,
-                  background: 'var(--surface)', border: '1px solid var(--border)',
-                  borderRadius: 'var(--radius)', padding: '18px 16px',
-                  cursor: 'pointer', textAlign: 'left',
-                  WebkitTapHighlightColor: 'transparent', width: '100%',
-                }}
-                onPointerDown={e => e.currentTarget.style.background = 'var(--surface2)'}
-                onPointerUp={e   => e.currentTarget.style.background = 'var(--surface)'}
-                onPointerLeave={e => e.currentTarget.style.background = 'var(--surface)'}
-              >
-                <span style={{
-                  width: 52, height: 52, borderRadius: 16,
-                  background: card.dimColor,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 26, flexShrink: 0,
-                }}>
-                  {card.icon}
-                </span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 2 }}>{card.label}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-2)' }}>{card.desc}</div>
-                </div>
-                <span style={{
-                  fontSize: 28, fontWeight: 800,
-                  color: count > 0 ? card.color : 'var(--text-3)',
-                  letterSpacing: '-1px', flexShrink: 0,
-                }}>
-                  {count}
-                </span>
-              </button>
-            )
-          })}
+          {/* ── Feature cards ── */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {CARDS.map((card, idx) => {
+              const items = getItems(card)
+              const count = items.length
+              return (
+                <button
+                  key={card.key}
+                  className="feature-card fade-up"
+                  style={{ animationDelay: `${(idx + 2) * 60}ms` }}
+                  onClick={() => openCard(card)}
+                >
+                  {/* Icon */}
+                  <div className="feature-icon-box" style={{ background: card.dimColor }}>
+                    <span style={{ fontSize: 26 }}>{card.emoji}</span>
+                  </div>
+
+                  {/* Text */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 3, color: 'var(--text)' }}>
+                      {card.label}
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.4 }}>
+                      {card.desc}
+                    </div>
+                  </div>
+
+                  {/* Count + arrow */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                    <span style={{
+                      fontSize: 30, fontWeight: 900,
+                      letterSpacing: '-1.5px',
+                      color: count > 0 ? card.color : 'var(--text-3)',
+                      lineHeight: 1,
+                    }}>
+                      {count}
+                    </span>
+                    <ChevronRight size={16} color="var(--text-3)" strokeWidth={2.5} />
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+
         </div>
       </div>
 
-      {/* Card bottom sheet */}
+      {/* ── Card bottom sheet ── */}
       {sheet && (
         <BottomSheet open onClose={() => setSheet(null)} title={sheet.title} color={sheet.color}>
           {sheet.items.length === 0 ? (
             <EmptyState icon="✨" title="All clear" sub="No users in this category." />
           ) : (
             <>
+              {/* Status summary chips */}
               {sheet.items.some(i => i.status) && (
-                <div style={{ padding: '10px 20px 6px', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                <div style={{ padding: '10px 20px 8px', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   {[
-                    { status: 'active_public',      label: 'Active — chose not to follow', color: 'var(--danger)'  },
-                    { status: 'private_or_inactive', label: 'Private or deactivated',       color: 'var(--warning)' },
-                  ].map(({ status, label, color }) => {
+                    { status: 'active_public',      label: 'Active — chose not to follow', color: 'var(--danger)',  bg: 'var(--danger-dim)'  },
+                    { status: 'private_or_inactive', label: 'Private or deactivated',       color: 'var(--warning)', bg: 'var(--warning-dim)' },
+                  ].map(({ status, label, color, bg }) => {
                     const n = sheet.items.filter(i => i.status === status).length
                     return n > 0 ? (
-                      <span key={status} style={{ fontSize: 11, color, background: `${color}18`, padding: '3px 8px', borderRadius: 999, fontWeight: 600 }}>
+                      <span key={status} style={{
+                        fontSize: 11, color,
+                        background: bg,
+                        border: `1px solid ${color}`,
+                        padding: '4px 9px', borderRadius: 999, fontWeight: 700, opacity: 0.92,
+                      }}>
                         {n} {label}
                       </span>
                     ) : null
                   })}
                 </div>
               )}
+
               {sheet.items.map(item => {
                 const b = statusBadge(item.status, sheet.badge, sheet.badgeColor)
                 return (
@@ -238,7 +202,7 @@ export default function DashboardPage() {
                     sub={formatDate(item.followed_at || item.event_ts)}
                     badge={b.label}
                     badgeColor={b.color}
-                    onClick={() => setSheet(null)}
+                    onClick={() => {}}
                   />
                 )
               })}
@@ -247,7 +211,7 @@ export default function DashboardPage() {
         </BottomSheet>
       )}
 
-      {/* Followers / Following list sheet */}
+      {/* ── Followers / Following list sheet ── */}
       {listSheet && (
         <BottomSheet
           open
@@ -255,9 +219,7 @@ export default function DashboardPage() {
           title={listSheet === 'followers' ? '👥 Followers' : '➡️ Following'}
           color={listSheet === 'followers' ? 'var(--success)' : 'var(--accent)'}
         >
-          {listLoading ? (
-            <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-3)' }}>Loading…</div>
-          ) : listItems.length === 0 ? (
+          {listItems.length === 0 ? (
             <EmptyState icon="📭" title="No data" sub="Upload a snapshot first." />
           ) : (
             listItems.map(item => (
@@ -287,38 +249,4 @@ function statusBadge(status, fallbackLabel, fallbackColor) {
 function formatDate(dt) {
   if (!dt) return null
   return new Date(dt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-}
-
-function StatBtn({ label, value, color, onClick }) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        flex: 1, padding: '14px 8px', textAlign: 'center',
-        background: 'none', border: 'none', cursor: 'pointer',
-        WebkitTapHighlightColor: 'transparent',
-      }}
-      onPointerDown={e => e.currentTarget.style.background = 'var(--surface2)'}
-      onPointerUp={e   => e.currentTarget.style.background = 'none'}
-      onPointerLeave={e => e.currentTarget.style.background = 'none'}
-    >
-      <div style={{ fontSize: 22, fontWeight: 700, color }}>{value ?? '—'}</div>
-      <div style={{ fontSize: 11, color: 'var(--text-2)', marginTop: 2 }}>{label}</div>
-    </button>
-  )
-}
-
-function Skeleton() {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh' }}>
-      <PageHeader title="Dashboard" />
-      <div style={{ flex: 1, padding: '16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <div className="skeleton" style={{ height: 80, borderRadius: 'var(--radius)' }} />
-        <div className="skeleton" style={{ height: 72, borderRadius: 'var(--radius)' }} />
-        {[1, 2, 3].map(i => (
-          <div key={i} className="skeleton" style={{ height: 86, borderRadius: 'var(--radius)' }} />
-        ))}
-      </div>
-    </div>
-  )
 }

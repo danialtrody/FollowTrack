@@ -1,53 +1,50 @@
 # FollowTrack
 
-Track who unfollows you on Instagram — using your own data export. No API, no login, no server required.
+Know exactly who unfollowed you, who you follow that doesn't follow back, and which accounts in your list have gone ghost — all using your own Instagram data export. No login. No API. No tracking.
 
-Every user's data lives entirely in their own browser. Nothing is sent to a server or stored anywhere else.
+**Live demo:** [followtrack.app](https://followtrack.app)
 
 ---
 
 ## What it does
 
-- **Lost Followers** — see who unfollowed you since your last upload
+Upload your Instagram data export and FollowTrack gives you a full picture of your follower activity:
+
+- **Lost Followers** — see exactly who unfollowed you between uploads
 - **New Followers** — see who started following you
 - **Not Following Back** — accounts you follow that don't follow you back
-- **Ghost Account Scanner** — detects private, deactivated, or deleted accounts in your following list
-- **Snapshot History** — upload multiple exports over time and track changes
-- **User Timeline** — see the full follow/unfollow history for any specific user
-- **Search** — find any user by username across all your snapshots
+- **Ghost Account Scanner** — finds accounts in your following list that are private, deactivated, or deleted
+- **Snapshot History** — upload your export multiple times over weeks or months to track how your followers change over time
+- **User Timeline** — tap any username to see their full follow/unfollow history with you
 
 ---
 
-## How to use
+## Your data stays with you
 
-### Step 1 — Export your Instagram data
+Everything is stored locally in your browser. Your follower data never leaves your device and is never sent anywhere.
 
-1. Open Instagram → **Profile** → ☰ Menu
-2. **Settings** → **Your activity** → **Download your information**
-3. Select **"Followers and following"**
-4. Choose **JSON** format → **Request download**
-5. Wait for the email from Instagram, download the ZIP
-
-### Step 2 — Upload
-
-Open the app, tap **Upload**, select your ZIP. That's it.
-
-Upload again later to see what changed.
+The only exception is the ghost account scanner — when you run it, the app checks if accounts are still active on Instagram. No personal data is sent, just usernames to verify.
 
 ---
 
-## How data is stored
+## How to use it
 
-Your data never leaves your device. Everything is saved in your browser's IndexedDB (local storage). Clearing browser data will erase your history.
+### 1. Export your data from Instagram
 
-The backend only handles one thing: when you run the **ghost account scanner**, it makes HTTP requests to Instagram to check if accounts are active — no data is stored server-side.
+1. Go to your Instagram profile
+2. Tap the menu (☰) → **Settings** → **Your activity**
+3. Select **Download your information**
+4. Choose **Followers and following** → **JSON format**
+5. Request the download and wait for Instagram's email
+6. Download the ZIP file they send you
 
----
+### 2. Upload to FollowTrack
 
-## Tech stack
+Open the app, go to **Upload**, and select the ZIP file. The app reads everything locally — no file is uploaded to any server.
 
-- **Frontend**: React 18 · Vite · IndexedDB (idb) · JSZip
-- **Backend**: Python 3.11 · FastAPI · httpx (account checker only)
+### 3. Upload again later to see changes
+
+Come back in a week or a month, upload a new export, and FollowTrack will show you exactly what changed — who left, who's new, who still hasn't followed back.
 
 ---
 
