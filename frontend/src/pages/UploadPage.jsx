@@ -15,7 +15,7 @@ const STEPS = [
 ]
 
 export default function UploadPage() {
-  const { latestSnapshot, statuses, addSnapshot, updateStatuses, clearData } = useApp()
+  const { latestSnapshot, statuses, addSnapshot, updateStatuses } = useApp()
   const [phase,   setPhase]   = useState('idle')
   const [message, setMessage] = useState('')
   const [upload,  setUpload]  = useState(null)
@@ -320,20 +320,6 @@ export default function UploadPage() {
                 </div>
               </div>
               <button className="btn btn-ghost btn-full" onClick={reset}>Try Again</button>
-            </div>
-          )}
-
-          {/* ── Saved data ── */}
-          {phase === 'idle' && latestSnapshot && (
-            <div className="fade-up" style={{ marginBottom: 20 }}>
-              <button
-                className="btn btn-ghost btn-full"
-                onClick={() => {
-                  if (window.confirm('Delete the data saved on this device?')) clearData()
-                }}
-              >
-                Clear saved data
-              </button>
             </div>
           )}
 

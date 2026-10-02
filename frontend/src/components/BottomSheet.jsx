@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 
 export default function BottomSheet({ open, onClose, title, children, color }) {
@@ -14,7 +15,9 @@ export default function BottomSheet({ open, onClose, title, children, color }) {
 
   if (!open) return null
 
-  return (
+  // Rendered on <body> so an animated (transformed) ancestor like .fade-up can't
+  // trap the fixed overlay or stack it underneath sibling cards.
+  return createPortal(
     <div className="sheet-backdrop" onClick={handleBackdrop}>
       <div className="sheet-panel">
         {/* Handle */}
@@ -49,6 +52,7 @@ export default function BottomSheet({ open, onClose, title, children, color }) {
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
