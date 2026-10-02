@@ -19,11 +19,11 @@ Upload your Instagram data export and FollowTrack gives you a full picture of yo
 
 ---
 
-## Your data stays with you
+## Your data and your account
 
-Everything is stored locally in your browser. Your follower data never leaves your device and is never sent anywhere.
+You sign in with an email and password. The ZIP is read in your browser; only the parsed lists (followers, following, blocked, pending requests, ...) are saved to your account in the database, so your history follows you across devices. The original ZIP file is not stored.
 
-The only exception is the ghost account scanner — when you run it, the app checks if accounts are still active on Instagram. No personal data is sent, just usernames to verify.
+The ghost account scanner sends usernames to the server, which checks whether those accounts are still active on Instagram.
 
 ---
 
@@ -40,7 +40,7 @@ The only exception is the ghost account scanner — when you run it, the app che
 
 ### 2. Upload to FollowTrack
 
-Open the app, go to **Upload**, and select the ZIP file. The app reads everything locally — no file is uploaded to any server.
+Create an account, go to **Upload**, and select the ZIP file. The app parses it locally and saves the result to your account.
 
 ### 3. Upload again later to see changes
 
@@ -54,6 +54,9 @@ Come back in a week or a month, upload a new export, and FollowTrack will show y
 ```bash
 cd backend
 pip install -r requirements.txt
+export DATABASE_URL='postgresql://...'   # your Postgres (Neon) connection string, required
+export SESSION_SECRET='...'
+alembic upgrade head
 uvicorn app.main:app --reload --port 8000
 ```
 
@@ -73,12 +76,6 @@ Open `http://localhost:5173`.
 Single Render web service — FastAPI serves the built frontend. Reference commands (keep in sync with the Render dashboard):
 
 - **Build:** `cd frontend && npm ci && npm run build && cd ../backend && pip install -r requirements.txt`
-- **Start:** `cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+- **Start:** `cd backend && alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+- **Environment:** `DATABASE_URL` (Neon Postgres connection string, `sslmode=require`), `SESSION_SECRET` (long random string), `HTTPS_ONLY=1`.
 - Requires Python 3.10+.
-
-## Tests
-
-```bash
-cd frontend && npm test
-cd backend && pip install -r requirements-dev.txt && python -m pytest
-```

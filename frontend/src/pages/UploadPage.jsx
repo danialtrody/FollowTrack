@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate }                   from 'react-router-dom'
-import { Upload, CheckCircle, AlertCircle, ArrowRight, Smartphone, Download, FileArchive, Send } from 'lucide-react'
+import { Upload, CheckCircle, AlertCircle, ArrowRight, Smartphone, Download, FileArchive, Send, Trash2 } from 'lucide-react'
 import { parseZip }                      from '../lib/parseZip'
 import { getFollowingList }              from '../lib/analysis'
 import { startCheck, getCheckStatus }    from '../api/client'
@@ -15,7 +15,7 @@ const STEPS = [
 ]
 
 export default function UploadPage() {
-  const { latestSnapshot, statuses, addSnapshot, updateStatuses } = useApp()
+  const { snapshots, latestSnapshot, statuses, addSnapshot, updateStatuses, clearHistory } = useApp()
   const [phase,   setPhase]   = useState('idle')
   const [message, setMessage] = useState('')
   const [upload,  setUpload]  = useState(null)
@@ -49,6 +49,15 @@ export default function UploadPage() {
     setScan(null)
   }
 
+  async function handleClearHistory() {
+    if (!window.confirm('Delete all uploads and scan results from your account? This cannot be undone.')) return
+    try { await clearHistory() }
+    catch {
+      setPhase('error')
+      setMessage('Could not clear your history. Try again.')
+    }
+  }
+
   async function handleFile(file) {
     if (!file) return
     if (!file.name.endsWith('.zip')) {
@@ -59,7 +68,16 @@ export default function UploadPage() {
     setPhase('uploading')
     try {
       const parsed   = await parseZip(file)
-      const snapshot = addSnapshot(parsed)
+      const snapshot = await addSnapshot(parsed)
+
+      // An older export goes into the history only — it must not overwrite the current
+      // account statuses or trigger a scan of outdated lists
+      if (latestSnapshot && parsed.exported_at < (latestSnapshot.exported_at ?? latestSnapshot.uploaded_at)) {
+        setScanNote('This export is older than your latest one, so it was saved to your history only. Your current data is unchanged.')
+        setUpload({ snapshot: { followers_count: latestSnapshot.followers_count, following_count: latestSnapshot.following_count } })
+        setPhase('success')
+        return
+      }
 
       const followerSet = new Set(parsed.followers.map(u => u.username))
       const mutualStatus = {}
@@ -90,9 +108,11 @@ export default function UploadPage() {
       } else {
         setPhase('success')
       }
-    } catch {
+    } catch (err) {
       setPhase('error')
-      setMessage('Upload failed. Make sure this is a valid Instagram export ZIP.')
+      setMessage(err.response?.status === 409
+        ? 'This export was already uploaded to your account. Upload a newer export to compare.'
+        : 'Upload failed. Make sure this is a valid Instagram export ZIP.')
     }
   }
 
@@ -335,6 +355,12 @@ export default function UploadPage() {
                 ))}
               </div>
             </div>
+          )}
+
+          {phase === 'idle' && snapshots.length > 0 && (
+            <button className="btn btn-ghost btn-full" style={{ marginTop: 14, color: 'var(--danger)' }} onClick={handleClearHistory}>
+              <Trash2 size={15} /> Clear history ({snapshots.length} upload{snapshots.length === 1 ? '' : 's'})
+            </button>
           )}
 
         </div>
