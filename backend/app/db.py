@@ -5,7 +5,6 @@ from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
-# Local development: read backend/.env (git-ignored). In production the env vars come from Render.
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 
@@ -13,7 +12,6 @@ def database_url() -> str:
     url = os.getenv("DATABASE_URL")
     if not url:
         raise RuntimeError("DATABASE_URL is not set — point it at your Postgres (e.g. Neon) connection string")
-    # Neon / Render hand out postgres:// or postgresql:// — use the psycopg 3 driver
     if url.startswith("postgres://"):
         url = "postgresql://" + url[len("postgres://"):]
     if url.startswith("postgresql://"):
@@ -28,7 +26,7 @@ class Base(DeclarativeBase):
 _url = database_url()
 engine = create_engine(
     _url,
-    pool_pre_ping=True,  # Neon suspends idle compute; drop dead connections
+    pool_pre_ping=True,
 )
 SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
 

@@ -2,7 +2,6 @@ import { useState } from 'react'
 import BottomSheet from './BottomSheet'
 import { useApp } from '../AppContext'
 
-// Offered once when data from before accounts existed is still on this device
 export default function ImportLocalSheet() {
   const { localData, importLocal, dismissLocal } = useApp()
   const [busy, setBusy] = useState(false)

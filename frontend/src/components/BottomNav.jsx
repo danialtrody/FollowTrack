@@ -1,9 +1,10 @@
 import { NavLink } from 'react-router-dom'
-import { Upload, LayoutDashboard } from 'lucide-react'
+import { Upload, LayoutDashboard, History } from 'lucide-react'
 
 const tabs = [
   { to: '/upload',    icon: Upload,          label: 'Upload'    },
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/timeline',  icon: History,         label: 'Timeline'  },
 ]
 
 export default function BottomNav() {

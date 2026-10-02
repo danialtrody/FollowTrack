@@ -15,15 +15,11 @@ export default function BottomSheet({ open, onClose, title, children, color }) {
 
   if (!open) return null
 
-  // Rendered on <body> so an animated (transformed) ancestor like .fade-up can't
-  // trap the fixed overlay or stack it underneath sibling cards.
   return createPortal(
     <div className="sheet-backdrop" onClick={handleBackdrop}>
       <div className="sheet-panel">
-        {/* Handle */}
         <div className="sheet-handle" />
 
-        {/* Top accent line */}
         <div style={{
           height: 3,
           background: color || 'var(--grad-accent)',
@@ -33,7 +29,6 @@ export default function BottomSheet({ open, onClose, title, children, color }) {
           flexShrink: 0,
         }} />
 
-        {/* Header */}
         <div className="sheet-header">
           <span style={{
             fontSize: 17, fontWeight: 800,
@@ -47,7 +42,6 @@ export default function BottomSheet({ open, onClose, title, children, color }) {
           </button>
         </div>
 
-        {/* Scrollable content */}
         <div className="sheet-scroll">
           {children}
         </div>

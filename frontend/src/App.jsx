@@ -6,18 +6,19 @@ import ImportLocalSheet from './components/ImportLocalSheet'
 import BottomNav     from './components/BottomNav'
 import UploadPage    from './pages/UploadPage'
 import DashboardPage from './pages/DashboardPage'
-import { Upload, LayoutDashboard, Users, LogOut } from 'lucide-react'
+import TimelinePage  from './pages/TimelinePage'
+import { Upload, LayoutDashboard, History, Users, LogOut } from 'lucide-react'
 
 const NAV_ITEMS = [
   { to: '/upload',    icon: Upload,          label: 'Upload'    },
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/timeline',  icon: History,         label: 'Timeline'  },
 ]
 
 function Sidebar() {
   const { user, logout } = useAuth()
   return (
     <aside className="app-sidebar">
-      {/* Logo */}
       <div className="sidebar-logo">
         <div className="sidebar-logo-icon">
           <Users size={18} color="#fff" strokeWidth={2.5} />
@@ -25,7 +26,6 @@ function Sidebar() {
         <span className="sidebar-logo-text">FollowTrack</span>
       </div>
 
-      {/* Navigation */}
       <nav className="sidebar-nav">
         {NAV_ITEMS.map(({ to, icon: Icon, label }) => (
           <NavLink
@@ -39,7 +39,6 @@ function Sidebar() {
         ))}
       </nav>
 
-      {/* Footer */}
       <div className="sidebar-footer">
         <div style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.email}</div>
         <button className="btn btn-ghost" style={{ marginTop: 8 }} onClick={logout}>
@@ -79,6 +78,7 @@ function Authenticated() {
             <Route path="/"          element={<Navigate to="/upload" replace />} />
             <Route path="/upload"    element={<UploadPage />} />
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/timeline"  element={<TimelinePage />} />
             <Route path="*"          element={<Navigate to="/upload" replace />} />
           </Routes>
         </div>

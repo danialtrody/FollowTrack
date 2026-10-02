@@ -1,7 +1,7 @@
 from alembic import context
 
 from app.db import Base, engine
-from app import models  # noqa: F401  (registers tables on Base.metadata)
+from app import models
 
 target_metadata = Base.metadata
 

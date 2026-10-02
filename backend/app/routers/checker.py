@@ -21,9 +21,3 @@ def check_status(job_id: str):
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     return job
-
-
-@router.delete("/{job_id}")
-def cancel_check(job_id: str):
-    checker.cancel_job(job_id)
-    return {"detail": "cancellation requested"}

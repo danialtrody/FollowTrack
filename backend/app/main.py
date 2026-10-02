@@ -12,7 +12,6 @@ DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
 
 app = FastAPI(title="FollowTrack API", version="2.0.0")
 
-# Signed, HttpOnly session cookie. SESSION_SECRET is required (no default); HTTPS_ONLY=1 behind TLS.
 app.add_middleware(
     SessionMiddleware,
     secret_key=os.environ["SESSION_SECRET"],
@@ -21,7 +20,6 @@ app.add_middleware(
     https_only=os.getenv("HTTPS_ONLY", "") == "1",
 )
 
-# Production is same-origin and dev goes through the Vite proxy, so CORS is opt-in.
 CORS_ORIGINS = [o.strip() for o in os.getenv("CORS_ORIGINS", "").split(",") if o.strip()]
 
 if CORS_ORIGINS:
@@ -43,7 +41,6 @@ def health():
     return {"status": "ok"}
 
 
-# Serve built frontend in production
 if DIST.exists():
     if (DIST / "assets").is_dir():
         app.mount("/assets", StaticFiles(directory=str(DIST / "assets")), name="assets")

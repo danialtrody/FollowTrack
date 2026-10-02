@@ -9,8 +9,6 @@ const AVATAR_GRADS = [
   'linear-gradient(135deg, #0E7490, #22D3EE)',
 ]
 
-// Map CSS variable color names to their pre-defined dim variants.
-// This avoids invalid CSS like "var(--danger)1A".
 const DIM_COLOR = {
   'var(--danger)':  'var(--danger-dim)',
   'var(--warning)': 'var(--warning-dim)',
@@ -29,16 +27,13 @@ function avatarGrad(username) {
   return AVATAR_GRADS[Math.abs(hash) % AVATAR_GRADS.length]
 }
 
-export default function UserRow({ username, sub, badge, badgeColor, onClick }) {
+export default function UserRow({ username, sub, badge, badgeColor, onClick, action }) {
   const initial = username?.[0]?.toUpperCase() || '?'
   const grad    = avatarGrad(username || '')
 
   return (
-    <button
-      onClick={onClick}
-      className="user-row"
-    >
-      {/* Avatar */}
+    <div className="user-row" role="button" tabIndex={0} onClick={onClick}
+         style={{ cursor: onClick ? 'pointer' : 'default' }}>
       <div
         className="user-avatar"
         style={{ background: grad, boxShadow: `0 4px 12px ${grad.match(/#[A-Fa-f0-9]{6}/)?.[0] ?? '#8B5CF6'}44` }}
@@ -46,7 +41,6 @@ export default function UserRow({ username, sub, badge, badgeColor, onClick }) {
         {initial}
       </div>
 
-      {/* Text */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
           fontSize: 14, fontWeight: 600, color: 'var(--text)',
@@ -61,7 +55,6 @@ export default function UserRow({ username, sub, badge, badgeColor, onClick }) {
         )}
       </div>
 
-      {/* Badge */}
       {badge && (
         <span style={{
           fontSize: 10, fontWeight: 700,
@@ -78,6 +71,18 @@ export default function UserRow({ username, sub, badge, badgeColor, onClick }) {
           {badge}
         </span>
       )}
-    </button>
+      {action && (
+        <button
+          onClick={e => { e.stopPropagation(); action.onClick() }}
+          style={{
+            fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 999, flexShrink: 0,
+            background: 'var(--surface2)', color: 'var(--text-2)',
+            border: '1px solid var(--border)', cursor: 'pointer',
+          }}
+        >
+          {action.label}
+        </button>
+      )}
+    </div>
   )
 }

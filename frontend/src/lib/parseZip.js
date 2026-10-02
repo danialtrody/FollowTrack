@@ -19,7 +19,7 @@ function parseFollowersFile(data) {
       if (sld.length) {
         out.push({ username: sld[0].value.trim().toLowerCase(), timestamp: epochToISO(sld[0].timestamp) })
       }
-    } catch { /* skip */ }
+    } catch {}
   }
   return out
 }
@@ -32,14 +32,14 @@ function parseFollowingFile(data) {
       const username = (item.title || '').trim().toLowerCase()
       const sld = item.string_list_data || []
       if (username) out.push({ username, timestamp: sld[0] ? epochToISO(sld[0].timestamp) : null })
-    } catch { /* skip */ }
+    } catch {}
   }
   return out
 }
 
 function parseLabelValuesFile(data) {
   const out = []
-  if (data && !Array.isArray(data)) data = Object.values(data)[0]
+  if (data && !Array.isArray(data)) data = data.label_values ? [data] : Object.values(data)[0]
   if (!Array.isArray(data)) return out
   for (const item of data) {
     try {
@@ -48,7 +48,7 @@ function parseLabelValuesFile(data) {
         if (lv.label === 'Username') { username = (lv.value || '').trim().toLowerCase(); break }
       }
       if (username) out.push({ username, timestamp: epochToISO(item.timestamp) })
-    } catch { /* skip */ }
+    } catch {}
   }
   return out
 }
@@ -102,9 +102,6 @@ export async function parseZip(file) {
   const unfollowedFile       = names.find(n => n.endsWith('recently_unfollowed_profiles.json'))
   const recently_unfollowed  = unfollowedFile ? parseLabelValuesFile(await readJson(unfollowedFile) || []) : []
 
-  const requestsFile    = names.find(n => n.endsWith('recent_follow_requests.json'))
-  const received_requests = requestsFile ? parseLabelValuesFile(await readJson(requestsFile) || []) : []
-
   if (!followers.length && !following.length) {
     const isHtml = names.some(n => /followers_\d+\.html$|following\.html$/.test(n.split('/').pop()))
     throw new ZipFormatError(isHtml
@@ -112,7 +109,6 @@ export async function parseZip(file) {
       : 'No followers or following found in this ZIP. Make sure you selected "Followers and following" in JSON format.')
   }
 
-  // Instagram stamps every file in the ZIP with the export time
   const exportedAt = Object.values(zip.files).reduce((max, f) => (f.date > max ? f.date : max), new Date(0))
 
   return {
@@ -123,6 +119,5 @@ export async function parseZip(file) {
     blocked:              dedup(blocked),
     pending_sent:         dedup(pending_sent),
     recently_unfollowed:  dedup(recently_unfollowed),
-    received_requests:    dedup(received_requests),
   }
 }

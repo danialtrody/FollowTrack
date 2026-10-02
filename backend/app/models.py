@@ -39,3 +39,11 @@ class Status(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     username: Mapped[str] = mapped_column(String(100), primary_key=True)
     status: Mapped[str] = mapped_column(String(30))
+
+
+class Dismissed(Base):
+    """Rows the user marked as seen. `key` is "<card>:<username>", e.g. "lost_followers:bob"."""
+    __tablename__ = "dismissed"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    key: Mapped[str] = mapped_column(String(160), primary_key=True)
