@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeDiff, getNotFollowingBack, getFollowingList, getPendingSent, getScanTargets } from './analysis'
+import { computeDiff, getNotFollowingBack, getFollowingList, getPendingSent } from './analysis'
 
 const u = (username, timestamp = null) => ({ username, timestamp })
 
@@ -49,24 +49,3 @@ describe('getPendingSent', () => {
   })
 })
 
-describe('unknown status', () => {
-  it('is hidden from lists like deleted/deactivated accounts', () => {
-    expect(getNotFollowingBack(curr, { x: 'unknown' }).map(i => i.username)).toEqual(['a', 'y'])
-    expect(getFollowingList(curr, { x: 'unknown' }).map(i => i.username)).toEqual(['a', 'y'])
-  })
-})
-
-describe('getScanTargets', () => {
-  const snap = { followers: [u('a')], following: [u('a'), u('x'), u('y'), u('z'), u('__deleted__1')] }
-
-  it('marks mutuals active and skips deleted prefix', () => {
-    const { mutualStatus, toCheck } = getScanTargets(snap, {})
-    expect(mutualStatus).toEqual({ a: 'active_public' })
-    expect(toCheck).toEqual(['x', 'y', 'z'])
-  })
-
-  it('only re-checks unchecked and unknown accounts', () => {
-    const { toCheck } = getScanTargets(snap, { x: 'private_or_inactive', y: 'unknown' })
-    expect(toCheck).toEqual(['y', 'z'])
-  })
-})

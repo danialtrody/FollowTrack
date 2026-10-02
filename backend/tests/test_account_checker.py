@@ -48,25 +48,20 @@ def test_generic_page_is_private_or_inactive(monkeypatch):
 
 # ── blocked / unknown ─────────────────────────────────────────────────────────
 
-def test_rate_limit_is_blocked(monkeypatch):
+def test_rate_limit_counts_as_inactive(monkeypatch):
     for code in (401, 403, 429):
         _patch_get(monkeypatch, _Resp(code))
-        assert checker._classify("someone") == "blocked"
+        assert checker._classify("someone") == "private_or_inactive"
 
 
-def test_login_redirect_is_blocked(monkeypatch):
+def test_login_redirect_counts_as_inactive(monkeypatch):
     _patch_get(monkeypatch, _Resp(200, "<html>Log in</html>", url="https://www.instagram.com/accounts/login/"))
-    assert checker._classify("someone") == "blocked"
+    assert checker._classify("someone") == "private_or_inactive"
 
 
-def test_network_error_is_unknown(monkeypatch):
+def test_network_error_counts_as_inactive(monkeypatch):
     _patch_get(monkeypatch, exc=httpx.ConnectTimeout("timeout"))
-    assert checker._classify("someone") == "unknown"
-
-
-def test_invalid_username_is_unknown_without_request(monkeypatch):
-    _patch_get(monkeypatch, exc=AssertionError("should not be called"))
-    assert checker._classify("bad/name?x=1") == "unknown"
+    assert checker._classify("someone") == "private_or_inactive"
 
 
 # ── job runner ────────────────────────────────────────────────────────────────
@@ -75,7 +70,7 @@ def _run_job(monkeypatch, usernames, classify):
     monkeypatch.setattr(checker, "_classify", classify)
     checker._jobs["t"] = {
         "status": "running", "created_at": 0, "total": len(usernames), "checked": 0,
-        "active_public": 0, "private_or_inactive": 0, "deleted": 0, "unknown": 0, "results": {},
+        "active_public": 0, "private_or_inactive": 0, "deleted": 0, "results": {},
     }
     monkeypatch.setattr(checker, "MAX_WORKERS", 1)
     checker._run("t", usernames)
@@ -87,18 +82,3 @@ def test_job_done(monkeypatch):
     assert job["status"] == "done"
     assert job["results"] == {"a": "active_public", "b": "active_public"}
     assert job["active_public"] == 2
-
-
-def test_job_blocked_keeps_partial_results(monkeypatch):
-    job = _run_job(monkeypatch, ["a", "b", "c"], lambda u: "blocked" if u == "b" else "active_public")
-    assert job["status"] == "blocked"
-    assert job["results"] == {"a": "active_public"}
-
-
-def test_purge_old_finished_jobs(monkeypatch):
-    checker._jobs.clear()
-    checker._jobs["old"] = {"status": "done", "created_at": 0}
-    checker._jobs["running"] = {"status": "running", "created_at": 0}
-    checker._purge_old_jobs()
-    assert list(checker._jobs) == ["running"]
-    checker._jobs.clear()

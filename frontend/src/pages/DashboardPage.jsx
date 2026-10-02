@@ -177,7 +177,6 @@ export default function DashboardPage() {
                   {[
                     { status: 'active_public',      label: 'Active — chose not to follow', color: 'var(--danger)',  bg: 'var(--danger-dim)'  },
                     { status: 'private_or_inactive', label: 'Private or deactivated',       color: 'var(--warning)', bg: 'var(--warning-dim)' },
-                    { status: 'unknown',             label: 'Could not be verified',        color: 'var(--text-3)',  bg: 'var(--surface2)'    },
                   ].map(({ status, label, color, bg }) => {
                     const n = sheet.items.filter(i => i.status === status).length
                     return n > 0 ? (
@@ -203,6 +202,7 @@ export default function DashboardPage() {
                     sub={formatDate(item.followed_at || item.event_ts)}
                     badge={b.label}
                     badgeColor={b.color}
+                    onClick={() => {}}
                   />
                 )
               })}
@@ -229,6 +229,7 @@ export default function DashboardPage() {
                 sub={formatDate(item.followed_at)}
                 badge={null}
                 badgeColor="var(--text-3)"
+                onClick={() => {}}
               />
             ))
           )}
@@ -242,7 +243,6 @@ function statusBadge(status, fallbackLabel, fallbackColor) {
   if (status === 'active_public')       return { label: 'Active',             color: 'var(--danger)'  }
   if (status === 'private_or_inactive') return { label: 'Private / Inactive', color: 'var(--warning)' }
   if (status === 'deleted')             return { label: 'Deleted',             color: 'var(--text-3)'  }
-  if (status === 'unknown')             return { label: 'Unverified',          color: 'var(--text-3)'  }
   return { label: fallbackLabel, color: fallbackColor }
 }
 

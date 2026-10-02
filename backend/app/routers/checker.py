@@ -1,18 +1,16 @@
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from ..services import account_checker as checker
 
 router = APIRouter(prefix="/check", tags=["checker"])
 
 
 class CheckRequest(BaseModel):
-    usernames: list[str] = Field(max_length=10_000)
+    usernames: list[str]
 
 
 @router.post("/start")
 def start_check(body: CheckRequest):
-    if checker.active_jobs() >= checker.MAX_ACTIVE_JOBS:
-        raise HTTPException(status_code=429, detail="Too many scans running — try again shortly")
     job_id = checker.start_check(body.usernames)
     return {"job_id": job_id}
 

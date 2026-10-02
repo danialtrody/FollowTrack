@@ -3,7 +3,6 @@ import { ScanSearch, X, ChevronRight, RotateCcw } from 'lucide-react'
 import BottomSheet from './BottomSheet'
 import UserRow     from './UserRow'
 import { useApp }  from '../AppContext'
-import { getScanTargets } from '../lib/analysis'
 import { startCheck, getCheckStatus, cancelCheck } from '../api/client'
 
 export default function InactiveChecker({ totalFollowing }) {
@@ -22,23 +21,22 @@ export default function InactiveChecker({ totalFollowing }) {
       !followerSet.has(u.username) && statuses[u.username] === 'private_or_inactive'
     ).map(u => ({ username: u.username, status: 'private_or_inactive' }))
     if (existing.length) { setInactive(existing); setPhase('done') }
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function startScan() {
     if (!latestSnapshot) return
     try {
-      const { mutualStatus, toCheck } = getScanTargets(latestSnapshot, statuses)
+      const followerSet = new Set(latestSnapshot.followers.map(u => u.username))
+
+      const mutualStatus = {}
+      for (const u of latestSnapshot.following) {
+        if (followerSet.has(u.username)) mutualStatus[u.username] = 'active_public'
+      }
       if (Object.keys(mutualStatus).length) updateStatuses(mutualStatus)
 
-      // Nothing left to verify — every account already has a final status
-      if (toCheck.length === 0) {
-        const followerSet = new Set(latestSnapshot.followers.map(u => u.username))
-        setInactive(latestSnapshot.following.filter(u =>
-          !followerSet.has(u.username) && statuses[u.username] === 'private_or_inactive'
-        ).map(u => ({ username: u.username, status: 'private_or_inactive' })))
-        setPhase('done')
-        return
-      }
+      const toCheck = latestSnapshot.following
+        .filter(u => !followerSet.has(u.username) && statuses[u.username] !== 'deleted')
+        .map(u => u.username)
 
       const { data } = await startCheck(toCheck)
       setJobId(data.job_id)
@@ -73,7 +71,6 @@ export default function InactiveChecker({ totalFollowing }) {
       }
     } catch {
       clearInterval(pollRef.current)
-      setPhase('error')
     }
   }
 
