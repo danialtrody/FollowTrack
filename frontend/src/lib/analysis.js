@@ -1,8 +1,7 @@
-// Matches the backend's _not_deleted filter:
-// only null (not yet checked) or active_public pass through.
-// Excludes deleted and private_or_inactive.
+// Only null (not yet checked), active_public or unknown (couldn't be verified)
+// pass through. Excludes deleted and private_or_inactive.
 function isVisible(status) {
-  return status == null || status === 'active_public'
+  return status == null || status === 'active_public' || status === 'unknown'
 }
 
 // ── Diff engine ────────────────────────────────────────────────────────────────
@@ -73,6 +72,26 @@ export function getFollowingList(snap, userStatuses) {
     .filter(u => isVisible(userStatuses[u.username]))
     .map(u => toItem(u, userStatuses))
     .sort(byUsername)
+}
+
+// ── Ghost scan ─────────────────────────────────────────────────────────────────
+
+// Mutual follows are active by definition. Only accounts that are not mutual and
+// have no final status yet (unchecked or unknown) need to be sent to the scanner.
+export function getScanTargets(snap, userStatuses) {
+  const followerSet = new Set(snap.followers.map(u => u.username))
+
+  const mutualStatus = {}
+  for (const u of snap.following) {
+    if (followerSet.has(u.username)) mutualStatus[u.username] = 'active_public'
+  }
+
+  const toCheck = snap.following
+    .filter(u => !followerSet.has(u.username) && !u.username.startsWith('__deleted__'))
+    .filter(u => userStatuses[u.username] == null || userStatuses[u.username] === 'unknown')
+    .map(u => u.username)
+
+  return { mutualStatus, toCheck }
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────

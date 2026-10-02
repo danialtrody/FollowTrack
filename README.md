@@ -65,3 +65,20 @@ npm run dev
 ```
 
 Open `http://localhost:5173`.
+
+---
+
+## Deploy
+
+Single Render web service — FastAPI serves the built frontend. Reference commands (keep in sync with the Render dashboard):
+
+- **Build:** `cd frontend && npm ci && npm run build && cd ../backend && pip install -r requirements.txt`
+- **Start:** `cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+- Requires Python 3.10+.
+
+## Tests
+
+```bash
+cd frontend && npm test
+cd backend && pip install -r requirements-dev.txt && python -m pytest
+```

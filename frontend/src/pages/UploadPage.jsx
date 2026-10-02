@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate }                   from 'react-router-dom'
 import { Upload, CheckCircle, AlertCircle, ArrowRight, Smartphone, Download, FileArchive, Send } from 'lucide-react'
-import { parseZip }                      from '../lib/parseZip'
-import { getFollowingList }              from '../lib/analysis'
+import { parseZip, ZipFormatError }      from '../lib/parseZip'
+import { getFollowingList, getScanTargets } from '../lib/analysis'
 import { startCheck, getCheckStatus }    from '../api/client'
 import { useApp }                        from '../AppContext'
 import PageHeader                        from '../components/PageHeader'
@@ -20,6 +20,7 @@ export default function UploadPage() {
   const [message, setMessage] = useState('')
   const [upload,  setUpload]  = useState(null)
   const [scan,    setScan]    = useState(null)
+  const [scanNote, setScanNote] = useState('')
   const inputRef = useRef()
   const pollRef  = useRef()
   const navigate = useNavigate()
@@ -29,13 +30,19 @@ export default function UploadPage() {
     try {
       const { data } = await getCheckStatus(jobId)
       setScan({ ...data })
-      if (['done', 'error', 'cancelled'].includes(data.status)) {
+      if (['done', 'blocked', 'error', 'cancelled'].includes(data.status)) {
         clearInterval(pollRef.current)
         if (data.results) updateStatuses(data.results)
+        if (data.status === 'blocked') {
+          setScanNote(`Instagram rate-limited the scan after ${data.checked} checks — partial results saved. You can continue from the Dashboard.`)
+        } else if (data.status !== 'done') {
+          setScanNote('The ghost account scan did not finish. You can retry from the Dashboard.')
+        }
         setPhase('success')
       }
     } catch {
       clearInterval(pollRef.current)
+      setScanNote('Lost connection to the scanner — the ghost account scan did not finish. You can retry from the Dashboard.')
       setPhase('success')
     }
   }
@@ -47,6 +54,7 @@ export default function UploadPage() {
     setMessage('')
     setUpload(null)
     setScan(null)
+    setScanNote('')
   }
 
   async function handleFile(file) {
@@ -61,23 +69,18 @@ export default function UploadPage() {
       const parsed   = await parseZip(file)
       const snapshot = addSnapshot(parsed)
 
-      const followerSet = new Set(parsed.followers.map(u => u.username))
-      const mutualStatus = {}
-      for (const u of parsed.following) {
-        if (followerSet.has(u.username)) mutualStatus[u.username] = 'active_public'
-      }
+      // A fresh export re-checks every non-mutual account (stored statuses may be stale)
+      const { mutualStatus, toCheck: nonMutual } = getScanTargets(snapshot, {})
       if (Object.keys(mutualStatus).length) updateStatuses(mutualStatus)
-
-      const nonMutual = parsed.following
-        .filter(u => !followerSet.has(u.username) && !u.username.startsWith('__deleted__'))
-        .map(u => u.username)
 
       let scanJobId = null
       if (nonMutual.length > 0) {
         try {
           const { data: jobData } = await startCheck(nonMutual)
           scanJobId = jobData.job_id
-        } catch { /* backend unavailable — not fatal */ }
+        } catch {
+          setScanNote('The ghost account scanner is unavailable right now. You can retry from the Dashboard.')
+        }
       }
 
       setUpload({
@@ -90,9 +93,11 @@ export default function UploadPage() {
       } else {
         setPhase('success')
       }
-    } catch {
+    } catch (err) {
       setPhase('error')
-      setMessage('Upload failed. Make sure this is a valid Instagram export ZIP.')
+      setMessage(err instanceof ZipFormatError
+        ? err.message
+        : 'Upload failed. Make sure this is a valid Instagram export ZIP.')
     }
   }
 
@@ -254,7 +259,7 @@ export default function UploadPage() {
                 </div>
 
                 {/* Scan summary */}
-                {scan && scan.status === 'done' && (
+                {scan && (scan.status === 'done' || scan.status === 'blocked') && (
                   <div style={{
                     display: 'flex', gap: 8, flexWrap: 'wrap',
                     paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.07)',
@@ -263,6 +268,7 @@ export default function UploadPage() {
                       { label: 'Active',          val: scan.active_public       ?? 0, color: 'var(--success)', bg: 'var(--success-dim)' },
                       { label: 'Private/inactive', val: scan.private_or_inactive ?? 0, color: 'var(--warning)', bg: 'var(--warning-dim)' },
                       { label: 'Deleted',          val: scan.deleted             ?? 0, color: 'var(--text-3)',  bg: 'var(--surface2)'    },
+                      { label: 'Unverified',       val: scan.unknown             ?? 0, color: 'var(--text-3)',  bg: 'var(--surface2)'    },
                     ].map(({ label, val, color, bg }) => (
                       <span key={label} style={{
                         fontSize: 11, fontWeight: 700, padding: '4px 9px',
@@ -273,6 +279,16 @@ export default function UploadPage() {
                       </span>
                     ))}
                   </div>
+                )}
+
+                {/* Scan note */}
+                {scanNote && (
+                  <p style={{
+                    fontSize: 12, color: 'var(--warning)', lineHeight: 1.5,
+                    paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.07)',
+                  }}>
+                    {scanNote}
+                  </p>
                 )}
               </div>
 
