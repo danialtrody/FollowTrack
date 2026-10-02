@@ -75,7 +75,7 @@ export default function UserRow({ username, sub, badge, badgeColor, onClick, act
         <button
           onClick={e => { e.stopPropagation(); action.onClick() }}
           style={{
-            fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 999, flexShrink: 0,
+            fontSize: 12, fontWeight: 700, padding: '8px 14px', minHeight: 36, borderRadius: 999, flexShrink: 0,
             background: 'var(--surface2)', color: 'var(--text-2)',
             border: '1px solid var(--border)', cursor: 'pointer',
           }}

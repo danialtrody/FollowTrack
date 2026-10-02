@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Users } from 'lucide-react'
+import { Users, Mail, Lock, Eye, EyeOff, ArrowRight, UserMinus, History, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../AuthContext'
 
 function errorText(err) {
@@ -9,64 +9,108 @@ function errorText(err) {
   return 'Could not reach the server. Try again.'
 }
 
+const FEATURES = [
+  { icon: UserMinus,   title: 'See who unfollowed you', text: 'Compare followers and following in seconds.' },
+  { icon: History,     title: 'Track changes over time', text: 'Upload new exports and watch your history grow.' },
+  { icon: ShieldCheck, title: 'No Instagram login needed', text: 'Works from your own data export — nothing is shared.' },
+]
+
 export default function AuthPage() {
   const { login, register } = useAuth()
   const [mode, setMode]         = useState('login')
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
+  const [showPw, setShowPw]     = useState(false)
   const [error, setError]       = useState('')
   const [busy, setBusy]         = useState(false)
+
+  const isLogin = mode === 'login'
 
   async function submit(e) {
     e.preventDefault()
     setBusy(true)
     setError('')
     try {
-      await (mode === 'login' ? login : register)(email, password)
+      await (isLogin ? login : register)(email, password)
     } catch (err) {
       setError(errorText(err))
       setBusy(false)
     }
   }
 
-  const inputStyle = {
-    width: '100%', padding: '12px 14px', borderRadius: 'var(--radius-sm)',
-    background: 'var(--surface2)', border: '1px solid var(--border)',
-    color: 'var(--text)', fontSize: 15,
-  }
-
   return (
-    <div className="page-root" style={{ alignItems: 'center', justifyContent: 'center' }}>
-      <form onSubmit={submit} style={{ width: '100%', maxWidth: 380, padding: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+    <div className="auth-root">
+      <aside className="auth-brand">
+        <div className="auth-logo">
           <div className="sidebar-logo-icon"><Users size={18} color="#fff" strokeWidth={2.5} /></div>
           <span className="sidebar-logo-text">FollowTrack</span>
         </div>
+        <h2 className="auth-brand-title">Know your <span>audience</span>, clearly.</h2>
+        <ul className="auth-features">
+          {FEATURES.map(({ icon: Icon, title, text }) => (
+            <li key={title}>
+              <span className="auth-feature-icon"><Icon size={18} strokeWidth={2.2} /></span>
+              <div>
+                <strong>{title}</strong>
+                <p>{text}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </aside>
 
-        <h1 style={{ fontSize: 24 }}>{mode === 'login' ? 'Sign in' : 'Create account'}</h1>
+      <main className="auth-main">
+        <form onSubmit={submit} className="card auth-card fade-up">
+          <div className="auth-logo auth-logo-mobile">
+            <div className="sidebar-logo-icon"><Users size={18} color="#fff" strokeWidth={2.5} /></div>
+            <span className="sidebar-logo-text">FollowTrack</span>
+          </div>
 
-        <input
-          style={inputStyle} type="email" placeholder="Email" autoComplete="email"
-          value={email} onChange={e => setEmail(e.target.value)} required
-        />
-        <input
-          style={inputStyle} type="password" placeholder="Password (min 8 characters)"
-          autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-          value={password} onChange={e => setPassword(e.target.value)} minLength={8} required
-        />
+          <div>
+            <h1>{isLogin ? 'Welcome back' : 'Create your account'}</h1>
+            <p className="auth-sub">
+              {isLogin ? 'Sign in to see your follower insights.' : 'Start tracking your followers in under a minute.'}
+            </p>
+          </div>
 
-        {error && <p style={{ fontSize: 13, color: 'var(--danger)' }}>{error}</p>}
+          <label className="auth-field">
+            <Mail size={17} />
+            <input
+              type="email" placeholder="Email" autoComplete="email"
+              value={email} onChange={e => setEmail(e.target.value)} required
+            />
+          </label>
 
-        <button className="btn btn-primary btn-full" disabled={busy}>
-          {mode === 'login' ? 'Sign in' : 'Create account'}
-        </button>
-        <button
-          type="button" className="btn btn-ghost btn-full"
-          onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError('') }}
-        >
-          {mode === 'login' ? 'New here? Create an account' : 'Have an account? Sign in'}
-        </button>
-      </form>
+          <label className="auth-field">
+            <Lock size={17} />
+            <input
+              type={showPw ? 'text' : 'password'} placeholder="Password (min 8 characters)"
+              autoComplete={isLogin ? 'current-password' : 'new-password'}
+              value={password} onChange={e => setPassword(e.target.value)} minLength={8} required
+            />
+            <button
+              type="button" className="auth-eye" tabIndex={-1}
+              aria-label={showPw ? 'Hide password' : 'Show password'}
+              onClick={() => setShowPw(s => !s)}
+            >
+              {showPw ? <EyeOff size={17} /> : <Eye size={17} />}
+            </button>
+          </label>
+
+          {error && <p className="auth-error" role="alert">{error}</p>}
+
+          <button className="btn btn-primary btn-full" disabled={busy}>
+            {busy ? <span className="auth-spinner" /> : <>{isLogin ? 'Sign in' : 'Create account'} <ArrowRight size={17} /></>}
+          </button>
+
+          <p className="auth-switch">
+            {isLogin ? 'New here?' : 'Already have an account?'}{' '}
+            <button type="button" onClick={() => { setMode(isLogin ? 'register' : 'login'); setError('') }}>
+              {isLogin ? 'Create an account' : 'Sign in'}
+            </button>
+          </p>
+        </form>
+      </main>
     </div>
   )
 }

@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import Splash from './components/Splash'
 import { authMe, authLogin, authRegister, authLogout, setUnauthorizedHandler } from './api/client'
 
 const AuthContext = createContext(null)
@@ -28,7 +29,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={{ user, login, register, logout }}>
-      {user === undefined ? null : children}
+      {user === undefined ? <Splash /> : children}
     </AuthContext.Provider>
   )
 }

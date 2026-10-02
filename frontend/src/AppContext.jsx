@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useCallback, useEffect } from 'rea
 import { fetchSnapshots, postSnapshot, fetchStatuses, putStatuses, deleteHistory,
          fetchDismissed, putDismissed, removeDismissed } from './api/client'
 import { loadState, clearState } from './lib/storage'
+import Splash from './components/Splash'
 
 const AppContext = createContext(null)
 
@@ -128,7 +129,7 @@ export function AppProvider({ children }) {
       importLocal,
       dismissLocal,
     }}>
-      {ready ? children : null}
+      {ready ? children : <Splash />}
     </AppContext.Provider>
   )
 }

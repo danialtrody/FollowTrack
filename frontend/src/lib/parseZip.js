@@ -1,5 +1,3 @@
-import JSZip from 'jszip'
-
 const MAX_ZIP_BYTES = 200 * 1024 * 1024
 
 export class ZipFormatError extends Error {}
@@ -68,6 +66,7 @@ export async function parseZip(file) {
     throw new ZipFormatError('This file is too large to be a followers export (max 200 MB).')
   }
   const arrayBuffer = await file.arrayBuffer()
+  const { default: JSZip } = await import('jszip')
   const [fileHash, zip] = await Promise.all([
     sha256hex(arrayBuffer),
     JSZip.loadAsync(arrayBuffer),

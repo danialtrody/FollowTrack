@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, NavLink } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, NavLink, useLocation } from 'react-router-dom'
 import { AppProvider, useApp } from './AppContext'
 import { AuthProvider, useAuth } from './AuthContext'
 import AuthPage      from './pages/AuthPage'
@@ -39,10 +39,14 @@ function Sidebar() {
         ))}
       </nav>
 
-      <div className="sidebar-footer">
-        <div style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.email}</div>
-        <button className="btn btn-ghost" style={{ marginTop: 8 }} onClick={logout}>
-          <LogOut size={14} /> Sign out
+      <div className="sidebar-user">
+        <div className="sidebar-user-avatar">{user.email?.[0]?.toUpperCase() ?? '?'}</div>
+        <div className="sidebar-user-info">
+          <span className="sidebar-user-email" title={user.email}>{user.email}</span>
+          <span className="sidebar-user-role">Signed in</span>
+        </div>
+        <button className="sidebar-signout" aria-label="Sign out" title="Sign out" onClick={logout}>
+          <LogOut size={16} />
         </button>
       </div>
     </aside>
@@ -56,7 +60,7 @@ function SyncError() {
     <div
       onClick={clearSyncError}
       style={{
-        position: 'fixed', top: 12, left: 12, right: 12, zIndex: 1000, cursor: 'pointer',
+        position: 'fixed', top: 'calc(var(--sat) + 12px)', left: 12, right: 12, zIndex: 1000, cursor: 'pointer',
         padding: '12px 16px', borderRadius: 'var(--radius-sm)', fontSize: 13, lineHeight: 1.5,
         background: 'var(--danger-dim)', color: 'var(--danger)', border: '1px solid var(--danger)',
       }}
@@ -68,12 +72,14 @@ function SyncError() {
 
 function Authenticated() {
   const { user } = useAuth()
+  const location = useLocation()
   if (!user) return <AuthPage />
   return (
     <AppProvider>
       <div className="app-shell">
         <Sidebar />
         <div className="app-main">
+          <div className="route-fade" key={location.pathname}>
           <Routes>
             <Route path="/"          element={<Navigate to="/upload" replace />} />
             <Route path="/upload"    element={<UploadPage />} />
@@ -81,6 +87,7 @@ function Authenticated() {
             <Route path="/timeline"  element={<TimelinePage />} />
             <Route path="*"          element={<Navigate to="/upload" replace />} />
           </Routes>
+          </div>
         </div>
         <BottomNav />
       </div>

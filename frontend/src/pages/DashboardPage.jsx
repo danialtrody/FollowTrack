@@ -1,10 +1,12 @@
-import { useState } from 'react'
-import { ChevronRight } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { ChevronRight, Users, UserCheck, TrendingUp, TrendingDown } from 'lucide-react'
 import { useApp }        from '../AppContext'
 import PageHeader        from '../components/PageHeader'
 import BottomSheet       from '../components/BottomSheet'
 import UserRow           from '../components/UserRow'
 import EmptyState        from '../components/EmptyState'
+import CountUp           from '../components/CountUp'
+import Donut             from '../components/Donut'
 import { getNotFollowingBack, getPendingSent,
          getFollowersList, getFollowingList,
          getLostFollowers,
@@ -14,6 +16,7 @@ import { getNotFollowingBack, getPendingSent,
 const CARDS = [
   {
     key:        'mutuals',
+    group:      'people',
     label:      'Mutuals',
     desc:       'You follow them · they follow you back',
     emoji:      '🤝',
@@ -24,6 +27,7 @@ const CARDS = [
   },
   {
     key:        'fans',
+    group:      'people',
     label:      'Fans',
     desc:       "They follow you · you don't follow them",
     emoji:      '⭐',
@@ -34,6 +38,7 @@ const CARDS = [
   },
   {
     key:        'not_following_back',
+    group:      'people',
     label:      'Not Following Back',
     desc:       "You follow them · they don't follow back",
     emoji:      '👻',
@@ -44,6 +49,7 @@ const CARDS = [
   },
   {
     key:        'new_followers',
+    group:      'changes',
     label:      'New Followers',
     desc:       'Not in your previous export',
     emoji:      '🌱',
@@ -55,6 +61,7 @@ const CARDS = [
   },
   {
     key:        'lost_followers',
+    group:      'changes',
     label:      'Removed Me',
     desc:       'Followed you in an earlier export · gone now',
     emoji:      '💔',
@@ -66,6 +73,7 @@ const CARDS = [
   },
   {
     key:        'pending_sent',
+    group:      'other',
     label:      'Pending Requests',
     desc:       "You sent a request · not accepted yet",
     emoji:      '⏳',
@@ -76,6 +84,7 @@ const CARDS = [
   },
   {
     key:        'blocked',
+    group:      'other',
     label:      'Blocked',
     desc:       "Accounts you've blocked",
     emoji:      '🚫',
@@ -86,12 +95,38 @@ const CARDS = [
   }
 ]
 
+const GROUPS = [
+  { key: 'people',  title: 'Your people' },
+  { key: 'changes', title: 'Changes since last export' },
+  { key: 'other',   title: 'Other' },
+]
+
 export default function DashboardPage() {
   const { snapshots, latestSnapshot, statuses, dismissed, dismiss, restore } = useApp()
   const [sheet,     setSheet]     = useState(null)
   const [listSheet, setListSheet] = useState(null)
   const [listItems, setListItems] = useState([])
   const [showHidden, setShowHidden] = useState(false)
+
+  const computed = useMemo(() => {
+    if (!latestSnapshot) return null
+    const snap = latestSnapshot
+    const nfb  = getNotFollowingBack(snap, statuses)
+    return {
+      nfb,
+      itemsByCard: {
+        not_following_back: nfb,
+        pending_sent:       getPendingSent(snap),
+        lost_followers:     getLostFollowers(snapshots, statuses),
+        new_followers:      getNewFollowers(snapshots),
+        blocked:            getBlocked(snap),
+        mutuals:            getMutuals(snap),
+        fans:               getFans(snap),
+      },
+      net:            getNetChange(snapshots, statuses),
+      followingCount: getFollowingList(snap, statuses).length,
+    }
+  }, [snapshots, latestSnapshot, statuses])
 
   if (!latestSnapshot) {
     return (
@@ -106,24 +141,24 @@ export default function DashboardPage() {
     )
   }
 
-  const snap    = latestSnapshot
-  const nfb     = getNotFollowingBack(snap, statuses)
-  const itemsByCard = {
-    not_following_back: nfb,
-    pending_sent:       getPendingSent(snap),
-    lost_followers:     getLostFollowers(snapshots, statuses),
-    new_followers:      getNewFollowers(snapshots),
-    blocked:            getBlocked(snap),
-    mutuals:            getMutuals(snap),
-    fans:               getFans(snap),
-  }
-  const net = getNetChange(snapshots, statuses)
+  const snap = latestSnapshot
+  const { nfb, itemsByCard, net, followingCount } = computed
 
   const keyOf = (card, item) => `${card.key}:${item.username}`
 
 
   const followersCount = snap.followers_count
-  const followingCount = getFollowingList(snap, statuses).length
+
+  const mutualCount = itemsByCard.mutuals.length
+  const fanCount    = itemsByCard.fans.length
+  const nfbCount    = nfb.length
+  const followBackRate = mutualCount + nfbCount
+    ? Math.round((mutualCount / (mutualCount + nfbCount)) * 100) : 0
+  const breakdown = [
+    { label: 'Mutuals',            value: mutualCount, color: 'var(--success)' },
+    { label: 'Not following back', value: nfbCount,    color: 'var(--danger)'  },
+    { label: 'Fans',               value: fanCount,    color: 'var(--warning)' },
+  ]
 
   function getItems(card) {
     return itemsByCard[card.key].filter(i => !dismissed.has(keyOf(card, i)))
@@ -151,83 +186,96 @@ export default function DashboardPage() {
       <PageHeader title="Dashboard" />
 
       <div className="page-scroll scroll-area">
-        <div className="page-inner">
+        <div className="page-inner dash-wide">
 
-          <div className="stat-bar fade-up">
-            <button className="stat-card-btn" onClick={() => openList('followers')}>
-              <span className="stat-number" style={{
-                background: 'var(--grad-success)',
-                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-              }}>
-                {followersCount.toLocaleString()}
+          <div className="dash-stats fade-up">
+            <button className="dash-stat" onClick={() => openList('followers')}>
+              <span className="dash-stat-icon" style={{ background: 'var(--success-dim)', color: 'var(--success)' }}>
+                <Users size={18} strokeWidth={2.2} />
+              </span>
+              <span className="dash-stat-number" style={{ background: 'var(--grad-success)' }}>
+                <CountUp value={followersCount} />
               </span>
               <span className="stat-label">Followers</span>
+              <ChevronRight className="dash-stat-chev" size={16} strokeWidth={2.5} />
             </button>
 
-            <button className="stat-card-btn" onClick={() => openList('following')}>
-              <span className="stat-number" style={{
-                background: 'var(--grad-accent)',
-                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-              }}>
-                {followingCount.toLocaleString()}
+            <button className="dash-stat" onClick={() => openList('following')}>
+              <span className="dash-stat-icon" style={{ background: 'var(--accent-dim)', color: 'var(--accent-2)' }}>
+                <UserCheck size={18} strokeWidth={2.2} />
+              </span>
+              <span className="dash-stat-number" style={{ background: 'var(--grad-accent)' }}>
+                <CountUp value={followingCount} />
               </span>
               <span className="stat-label">Following</span>
+              <ChevronRight className="dash-stat-chev" size={16} strokeWidth={2.5} />
             </button>
+
+            {net && (
+              <div className="dash-net" data-dir={net.net > 0 ? 'up' : net.net < 0 ? 'down' : 'flat'}>
+                <span className="dash-stat-icon dash-net-icon">
+                  {net.net < 0 ? <TrendingDown size={18} strokeWidth={2.2} /> : <TrendingUp size={18} strokeWidth={2.2} />}
+                </span>
+                <span className="dash-net-value">
+                  {net.net > 0 ? '+' : net.net < 0 ? '−' : ''}<CountUp value={Math.abs(net.net)} />
+                </span>
+                <span className="stat-label">Net followers</span>
+                <span className="dash-net-split">
+                  <b className="gain">+{net.gained}</b>
+                  <b className="loss">−{net.lost}</b>
+                  <span>since {formatDate(net.since)}</span>
+                </span>
+              </div>
+            )}
           </div>
 
-          {net && (
-            <div className="fade-up" style={{
-              display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
-              padding: '12px 16px', marginBottom: 10, fontSize: 13, fontWeight: 700,
-              background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)',
-            }}>
-              <span style={{ color: 'var(--success)' }}>+{net.gained}</span>
-              <span style={{ color: 'var(--danger)' }}>−{net.lost}</span>
-              <span style={{ color: 'var(--text-2)', fontWeight: 600 }}>
-                followers · net {net.net > 0 ? '+' : net.net < 0 ? '−' : ''}{Math.abs(net.net)} since {formatDate(net.since)}
-              </span>
+          <div className="dash-overview fade-up" style={{ animationDelay: '80ms' }}>
+            <Donut segments={breakdown} centerValue={`${followBackRate}%`} centerLabel="follow back" />
+            <div className="dash-overview-text">
+              <h2 className="dash-section-title">Audience breakdown</h2>
+              <ul className="dash-legend">
+                {breakdown.map(b => (
+                  <li key={b.label}>
+                    <span className="dash-legend-dot" style={{ background: b.color }} />
+                    <span className="dash-legend-label">{b.label}</span>
+                    <b><CountUp value={b.value} /></b>
+                  </li>
+                ))}
+              </ul>
+              <p className="dash-overview-note">
+                {followBackRate}% of the accounts you follow follow you back.
+              </p>
             </div>
-          )}
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {CARDS.map((card, idx) => {
-              const items = getItems(card)
-              const count = items.length
-              return (
-                <button
-                  key={card.key}
-                  className="feature-card fade-up"
-                  style={{ animationDelay: `${(idx + 2) * 60}ms` }}
-                  onClick={() => openCard(card)}
-                >
-                  <div className="feature-icon-box" style={{ background: card.dimColor }}>
-                    <span style={{ fontSize: 26 }}>{card.emoji}</span>
-                  </div>
-
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 3, color: 'var(--text)' }}>
-                      {card.label}
-                    </div>
-                    <div style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.4 }}>
-                      {card.desc}
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                    <span style={{
-                      fontSize: 30, fontWeight: 900,
-                      letterSpacing: '-1.5px',
-                      color: count > 0 ? card.color : 'var(--text-3)',
-                      lineHeight: 1,
-                    }}>
-                      {count}
-                    </span>
-                    <ChevronRight size={16} color="var(--text-3)" strokeWidth={2.5} />
-                  </div>
-                </button>
-              )
-            })}
           </div>
+
+          {GROUPS.map(group => (
+            <section key={group.key} className="dash-section">
+              <h2 className="dash-section-title">{group.title}</h2>
+              <div className="dash-grid">
+                {CARDS.filter(c => c.group === group.key).map(card => {
+                  const count = getItems(card).length
+                  return (
+                    <button
+                      key={card.key}
+                      className="dash-tile fade-up"
+                      style={{ '--c': card.color, animationDelay: `${(CARDS.indexOf(card) + 2) * 50}ms` }}
+                      onClick={() => openCard(card)}
+                    >
+                      <span className="dash-tile-icon" style={{ background: card.dimColor }}>{card.emoji}</span>
+                      <span className="dash-tile-body">
+                        <span className="dash-tile-label">{card.label}</span>
+                        <span className="dash-tile-desc">{card.desc}</span>
+                      </span>
+                      <span className="dash-tile-count" data-zero={count === 0}>
+                        <CountUp value={count} />
+                        <ChevronRight size={16} strokeWidth={2.5} />
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </section>
+          ))}
 
         </div>
       </div>
