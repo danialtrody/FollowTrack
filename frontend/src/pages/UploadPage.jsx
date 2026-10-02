@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate }                   from 'react-router-dom'
-import { Upload, CheckCircle, AlertCircle, ArrowRight, Smartphone, Download, FileArchive, Send, Trash2 } from 'lucide-react'
+import { Upload, CheckCircle, AlertCircle, ArrowRight, Smartphone, Download, FileArchive, Send, Trash2, ShieldCheck } from 'lucide-react'
 import { parseZip }                      from '../lib/parseZip'
 import { getFollowingList }              from '../lib/analysis'
 import { startCheck, getCheckStatus }    from '../api/client'
 import { useApp }                        from '../AppContext'
 import PageHeader                        from '../components/PageHeader'
+import BottomSheet                       from '../components/BottomSheet'
 
 const STEPS = [
   { icon: Smartphone,    text: 'Open Instagram → Profile → ☰ Menu' },
@@ -21,6 +22,8 @@ export default function UploadPage() {
   const [upload,  setUpload]  = useState(null)
   const [scan,    setScan]    = useState(null)
   const [scanNote, setScanNote] = useState('')
+  const [confirmClear, setConfirmClear] = useState(false)
+  const [clearing, setClearing] = useState(false)
   const inputRef = useRef()
   const pollRef  = useRef()
   const navigate = useNavigate()
@@ -52,12 +55,14 @@ export default function UploadPage() {
   }
 
   async function handleClearHistory() {
-    if (!window.confirm('Delete all uploads and scan results from your account? This cannot be undone.')) return
+    setClearing(true)
     try { await clearHistory() }
     catch {
       setPhase('error')
       setMessage('Could not clear your history. Try again.')
     }
+    setClearing(false)
+    setConfirmClear(false)
   }
 
   async function handleFile(file) {
@@ -123,50 +128,49 @@ export default function UploadPage() {
       <PageHeader showLogo />
 
       <div className="page-scroll scroll-area">
-        <div className="page-inner">
+        <div className="page-inner up-wide">
 
-          <div className="fade-up" style={{ marginBottom: 28, paddingTop: 8 }}>
-            <h1 style={{ marginBottom: 10 }}>
+          <div className="up-hero fade-up">
+            <span className="up-badge"><ShieldCheck size={13} strokeWidth={2.4} /> No Instagram login needed</span>
+            <h1>
               Analyze Your<br />
-              <span style={{ background: 'var(--grad-accent)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-                Instagram Followers
-              </span>
+              <span className="grad-text">Instagram Followers</span>
             </h1>
-            <p style={{ fontSize: 15, color: 'var(--text-2)', lineHeight: 1.65, maxWidth: 400 }}>
+            <p>
               Export your data from Instagram and drop the ZIP here — we'll analyze who doesn't follow back, pending requests, and ghost accounts.
             </p>
           </div>
 
+          <div className="up-grid">
+          <div className="up-main">
+
           {(phase === 'idle' || phase === 'dragging') && (
-            <div className="fade-up stagger" style={{ animationDelay: '60ms', marginBottom: 20 }}>
+            <div className="fade-up" style={{ animationDelay: '60ms', marginBottom: 20 }}>
               <div
                 className={`drop-zone${phase === 'dragging' ? ' dragging' : ''}`}
+                role="button"
+                tabIndex={0}
+                aria-label="Choose your Instagram export ZIP file"
                 onDragOver={e => { e.preventDefault(); setPhase('dragging') }}
                 onDragLeave={() => setPhase('idle')}
                 onDrop={e => { e.preventDefault(); setPhase('idle'); handleFile(e.dataTransfer.files[0]) }}
                 onClick={() => inputRef.current?.click()}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); inputRef.current?.click() } }}
               >
                 <div className="drop-zone-icon">
-                  <Upload size={34} color="#fff" strokeWidth={2} />
+                  <Upload size={32} color="#fff" strokeWidth={2} />
                 </div>
-                <div style={{ textAlign: 'center' }}>
-                  <p style={{ fontSize: 19, fontWeight: 800, marginBottom: 6, letterSpacing: '-0.3px' }}>
-                    Drop your ZIP here
+                <div className="drop-zone-text">
+                  <p className="drop-zone-title">
+                    <span className="dz-pointer">Drop your ZIP here</span>
+                    <span className="dz-touch">Choose your ZIP file</span>
                   </p>
-                  <p style={{ fontSize: 14, color: 'var(--text-2)' }}>
-                    or tap to browse your files
+                  <p className="drop-zone-sub">
+                    <span className="dz-pointer">or click to browse your files</span>
+                    <span className="dz-touch">tap to browse your files</span>
                   </p>
                 </div>
-                <span style={{
-                  fontSize: 11, fontWeight: 700, letterSpacing: '0.06em',
-                  padding: '5px 12px', borderRadius: 999,
-                  background: 'var(--accent-dim)',
-                  color: 'var(--accent-2)',
-                  border: '1px solid rgba(139,92,246,0.25)',
-                  textTransform: 'uppercase',
-                }}>
-                  .zip file
-                </span>
+                <span className="up-chip">.zip file</span>
                 <input
                   ref={inputRef}
                   type="file"
@@ -180,18 +184,11 @@ export default function UploadPage() {
 
           {phase === 'uploading' && (
             <div className="fade-up" style={{ marginBottom: 20 }}>
-              <div style={{
-                background: 'var(--surface)',
-                border: '1px solid var(--border)',
-                borderRadius: 'var(--radius)',
-                padding: '36px 28px',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18,
-                backdropFilter: 'blur(24px)',
-              }}>
+              <div className="up-panel up-panel-center">
                 <Spinner />
                 <div style={{ textAlign: 'center' }}>
-                  <p style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>Reading your data…</p>
-                  <p style={{ fontSize: 13, color: 'var(--text-2)' }}>Parsing ZIP and building follower map</p>
+                  <p className="up-panel-title">Reading your data…</p>
+                  <p className="up-panel-sub">Parsing ZIP and building follower map</p>
                 </div>
               </div>
             </div>
@@ -199,28 +196,16 @@ export default function UploadPage() {
 
           {phase === 'scanning' && (
             <div className="fade-up" style={{ marginBottom: 20 }}>
-              <div style={{
-                background: 'var(--surface)',
-                border: '1px solid var(--border)',
-                borderRadius: 'var(--radius)',
-                padding: '22px',
-                display: 'flex', flexDirection: 'column', gap: 16,
-                backdropFilter: 'blur(24px)',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <div className="up-panel">
+                <div className="scan-head">
                   <Spinner size={24} />
-                  <div>
-                    <p style={{ fontSize: 15, fontWeight: 700 }}>Classifying accounts…</p>
-                    <p style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <p className="up-panel-title" style={{ fontSize: 15 }}>Classifying accounts…</p>
+                    <p className="up-panel-sub">
                       {scan ? `${scan.checked} / ${scan.total} checked` : 'Starting scan…'}
                     </p>
                   </div>
-                  <span style={{
-                    marginLeft: 'auto', fontSize: 20, fontWeight: 900,
-                    color: 'var(--accent-2)', letterSpacing: '-0.5px',
-                  }}>
-                    {pct}%
-                  </span>
+                  <span className="scan-pct">{pct}%</span>
                 </div>
                 <div className="progress-track">
                   <div className="progress-fill" style={{ width: `${pct}%` }} />
@@ -231,61 +216,43 @@ export default function UploadPage() {
 
           {phase === 'success' && upload && (
             <div className="fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 20 }}>
-              <div className="result-card" style={{
-                background: 'linear-gradient(135deg, rgba(52,211,153,0.08) 0%, rgba(5,150,105,0.05) 100%)',
-                border: '1px solid rgba(52,211,153,0.25)',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{
-                    width: 36, height: 36, borderRadius: 11,
-                    background: 'var(--success-dim)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    <CheckCircle size={20} color="var(--success)" />
+              <div className="result-card result-success">
+                <div className="result-head">
+                  <div className="result-icon pop" style={{ background: 'var(--success-dim)' }}>
+                    <CheckCircle size={22} color="var(--success)" />
                   </div>
                   <div>
-                    <p style={{ fontSize: 16, fontWeight: 800 }}>Analysis complete!</p>
-                    <p style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 1 }}>
-                      Your Instagram data has been processed
-                    </p>
+                    <p className="up-panel-title">Analysis complete!</p>
+                    <p className="up-panel-sub">Your Instagram data has been processed</p>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: 10 }}>
-                  <div className="pill-stat" style={{ background: 'rgba(52,211,153,0.1)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(52,211,153,0.18)' }}>
+                <div className="stat-tiles">
+                  <div className="pill-stat tile-success">
                     <span className="pill-stat-value" style={{ color: 'var(--success)' }}>
                       {upload.snapshot.followers_count.toLocaleString()}
                     </span>
                     <span className="pill-stat-label">Followers</span>
                   </div>
-                  <div className="pill-stat" style={{ background: 'var(--accent-dim)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(139,92,246,0.2)' }}>
-                    <span className="pill-stat-value" style={{ background: 'var(--grad-accent)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+                  <div className="pill-stat tile-accent">
+                    <span className="pill-stat-value grad-text">
                       {(latestSnapshot ? getFollowingList(latestSnapshot, statuses).length : upload.snapshot.following_count).toLocaleString()}
                     </span>
                     <span className="pill-stat-label">Following</span>
                   </div>
                 </div>
 
-                {scanNote && (
-                  <p style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.5 }}>{scanNote}</p>
-                )}
+                {scanNote && <p className="up-note">{scanNote}</p>}
 
                 {scan && scan.status === 'done' && (
-                  <div style={{
-                    display: 'flex', gap: 8, flexWrap: 'wrap',
-                    paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.07)',
-                  }}>
+                  <div className="scan-chips">
                     {[
-                      { label: 'Active',          val: scan.active_public       ?? 0, color: 'var(--success)', bg: 'var(--success-dim)' },
+                      { label: 'Active',           val: scan.active_public       ?? 0, color: 'var(--success)', bg: 'var(--success-dim)' },
                       { label: 'Private/inactive', val: scan.private_or_inactive ?? 0, color: 'var(--warning)', bg: 'var(--warning-dim)' },
-                      { label: 'Deleted',          val: scan.deleted             ?? 0, color: 'var(--text-3)',  bg: 'var(--surface2)'    },
+                      { label: 'Deleted',          val: scan.deleted             ?? 0, color: 'var(--text-2)',  bg: 'var(--surface2)'    },
                     ].map(({ label, val, color, bg }) => (
-                      <span key={label} style={{
-                        fontSize: 11, fontWeight: 700, padding: '4px 9px',
-                        borderRadius: 999, background: bg, color,
-                        border: `1px solid ${color}`, opacity: 0.9,
-                      }}>
-                        {val} {label}
+                      <span key={label} className="scan-chip" style={{ color, background: bg }}>
+                        <b>{val}</b> {label}
                       </span>
                     ))}
                   </div>
@@ -300,21 +267,14 @@ export default function UploadPage() {
 
           {phase === 'error' && (
             <div className="fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 20 }}>
-              <div className="result-card" style={{
-                background: 'linear-gradient(135deg, rgba(248,113,113,0.08) 0%, rgba(185,28,28,0.05) 100%)',
-                border: '1px solid rgba(248,113,113,0.28)',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{
-                    width: 36, height: 36, borderRadius: 11,
-                    background: 'var(--danger-dim)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    <AlertCircle size={20} color="var(--danger)" />
+              <div className="result-card result-error">
+                <div className="result-head">
+                  <div className="result-icon" style={{ background: 'var(--danger-dim)' }}>
+                    <AlertCircle size={22} color="var(--danger)" />
                   </div>
-                  <div>
-                    <p style={{ fontSize: 15, fontWeight: 800, color: 'var(--danger)' }}>Upload failed</p>
-                    <p style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 2, lineHeight: 1.5 }}>{message}</p>
+                  <div style={{ minWidth: 0 }}>
+                    <p className="up-panel-title" style={{ color: 'var(--danger)' }}>Upload failed</p>
+                    <p className="up-panel-sub" style={{ lineHeight: 1.5 }}>{message}</p>
                   </div>
                 </div>
               </div>
@@ -322,43 +282,54 @@ export default function UploadPage() {
             </div>
           )}
 
-          {phase === 'idle' && (
-            <div className="fade-up" style={{ animationDelay: '120ms' }}>
-              <div style={{
-                background: 'var(--surface)',
-                border: '1px solid var(--border)',
-                borderRadius: 'var(--radius)',
-                padding: '18px 20px',
-                backdropFilter: 'blur(24px)',
-              }}>
-                <p style={{
-                  fontSize: 10, fontWeight: 800, color: 'var(--text-3)',
-                  letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 14,
-                }}>
-                  How to export from Instagram
-                </p>
+          </div>
 
-                {STEPS.map(({ icon: Icon, text }, i) => (
-                  <div key={i} className="step-row">
-                    <div className="step-num">{i + 1}</div>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, flex: 1 }}>
-                      <Icon size={14} color="var(--accent-2)" style={{ marginTop: 2, flexShrink: 0 }} strokeWidth={2} />
-                      <span style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.55 }}>{text}</span>
-                    </div>
-                  </div>
-                ))}
+          <aside className={`up-aside${phase === 'idle' ? '' : ' up-aside-idle-only'}`}>
+          {(
+            <div className="fade-up" style={{ animationDelay: '120ms' }}>
+              <div className="up-panel">
+                <p className="up-eyebrow">How to export from Instagram</p>
+
+                <ol className="steps">
+                  {STEPS.map(({ icon: Icon, text }, i) => (
+                    <li key={i} className="step-row">
+                      <div className="step-num">{i + 1}</div>
+                      <div className="step-body">
+                        <Icon size={15} color="var(--accent-2)" strokeWidth={2} />
+                        <span>{text}</span>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
               </div>
             </div>
           )}
 
           {phase === 'idle' && snapshots.length > 0 && (
-            <button className="btn btn-ghost btn-full" style={{ marginTop: 14, color: 'var(--danger)' }} onClick={handleClearHistory}>
+            <button className="btn btn-ghost btn-full" style={{ marginTop: 14, color: 'var(--danger)' }} onClick={() => setConfirmClear(true)}>
               <Trash2 size={15} /> Clear history ({snapshots.length} upload{snapshots.length === 1 ? '' : 's'})
             </button>
           )}
+          </aside>
+          </div>
 
         </div>
       </div>
+
+      <BottomSheet open={confirmClear} onClose={() => !clearing && setConfirmClear(false)} title="Delete all history?" color="var(--danger)" compact>
+        <div className="confirm-sheet">
+          <p>
+            This permanently deletes all {snapshots.length} upload{snapshots.length === 1 ? '' : 's'} and scan results from your account.
+            This cannot be undone.
+          </p>
+          <div className="confirm-actions">
+            <button className="btn btn-ghost" disabled={clearing} onClick={() => setConfirmClear(false)}>Cancel</button>
+            <button className="btn btn-danger" disabled={clearing} onClick={handleClearHistory}>
+              <Trash2 size={15} /> {clearing ? 'Deleting…' : 'Delete all'}
+            </button>
+          </div>
+        </div>
+      </BottomSheet>
     </div>
   )
 }

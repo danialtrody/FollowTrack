@@ -1,5 +1,33 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, Users } from 'lucide-react'
+import { ChevronLeft, Users, CircleUser, LogOut } from 'lucide-react'
+import { useAuth } from '../AuthContext'
+import BottomSheet from './BottomSheet'
+
+// Mobile-only: the sidebar (with Sign out) is hidden below 768px.
+function AccountButton() {
+  const { user, logout } = useAuth()
+  const [open, setOpen] = useState(false)
+  if (!user) return null
+  return (
+    <>
+      <button className="account-btn" aria-label="Account" onClick={() => setOpen(true)}>
+        <CircleUser size={20} strokeWidth={1.8} />
+      </button>
+      <BottomSheet open={open} onClose={() => setOpen(false)} title="Account">
+        <div className="account-sheet">
+          <div className="account-email">
+            <span className="stat-label">Signed in as</span>
+            <span>{user.email}</span>
+          </div>
+          <button className="btn btn-ghost btn-full account-signout" onClick={logout}>
+            <LogOut size={16} /> Sign out
+          </button>
+        </div>
+      </BottomSheet>
+    </>
+  )
+}
 
 export default function PageHeader({ title, back, right, showLogo }) {
   const navigate = useNavigate()
@@ -46,7 +74,7 @@ export default function PageHeader({ title, back, right, showLogo }) {
       {showLogo && <div />}
 
       <div style={{ width: 38, display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
-        {right || null}
+        {right || <AccountButton />}
       </div>
     </header>
   )
