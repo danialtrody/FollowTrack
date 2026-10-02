@@ -1,4 +1,4 @@
-// Local-only persistence (IndexedDB). Nothing here ever leaves the device.
+// Read-only access to data saved on this device before accounts existed (used for the one-time import).
 
 const DB_NAME = 'followtrack'
 const STORE   = 'kv'
@@ -31,11 +31,6 @@ async function run(mode, fn) {
 export async function loadState() {
   try { return (await run('readonly', s => s.get(KEY))) ?? null }
   catch { return null }
-}
-
-export async function saveState(state) {
-  try { await run('readwrite', s => s.put(state, KEY)) }
-  catch { /* storage unavailable (private mode, quota) — app keeps working in memory */ }
 }
 
 export async function clearState() {

@@ -112,8 +112,12 @@ export async function parseZip(file) {
       : 'No followers or following found in this ZIP. Make sure you selected "Followers and following" in JSON format.')
   }
 
+  // Instagram stamps every file in the ZIP with the export time
+  const exportedAt = Object.values(zip.files).reduce((max, f) => (f.date > max ? f.date : max), new Date(0))
+
   return {
     file_hash:            fileHash,
+    exported_at:          exportedAt.toISOString(),
     followers:            dedup(followers),
     following:            dedup(following),
     blocked:              dedup(blocked),
