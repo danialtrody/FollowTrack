@@ -112,16 +112,10 @@ export async function parseZip(file) {
       : 'No followers or following found in this ZIP. Make sure you selected "Followers and following" in JSON format.')
   }
 
-  // Auto-tag deleted accounts (Instagram renames them to __deleted__*)
-  const tagDeleted = users => users.map(u => ({
-    ...u,
-    _deleted: u.username.startsWith('__deleted__'),
-  }))
-
   return {
     file_hash:            fileHash,
-    followers:            dedup(tagDeleted(followers)),
-    following:            dedup(tagDeleted(following)),
+    followers:            dedup(followers),
+    following:            dedup(following),
     blocked:              dedup(blocked),
     pending_sent:         dedup(pending_sent),
     recently_unfollowed:  dedup(recently_unfollowed),

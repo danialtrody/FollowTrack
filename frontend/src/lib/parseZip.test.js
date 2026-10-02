@@ -45,13 +45,12 @@ describe('parseZip', () => {
     expect(r.pending_sent.map(p => p.username)).toEqual(['frank'])
   })
 
-  it('tags __deleted__ accounts', async () => {
+  it('keeps __deleted__ accounts as regular users', async () => {
     const file = await makeZip({
       'followers_1.json': [follower('__deleted__123'), follower('gina')],
     })
     const r = await parseZip(file)
-    expect(r.followers.find(f => f.username === '__deleted__123')._deleted).toBe(true)
-    expect(r.followers.find(f => f.username === 'gina')._deleted).toBe(false)
+    expect(r.followers.map(f => f.username)).toEqual(['__deleted__123', 'gina'])
   })
 
   it('rejects a ZIP without followers or following', async () => {

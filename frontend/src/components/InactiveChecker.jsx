@@ -22,7 +22,7 @@ export default function InactiveChecker({ totalFollowing }) {
       !followerSet.has(u.username) && statuses[u.username] === 'private_or_inactive'
     ).map(u => ({ username: u.username, status: 'private_or_inactive' }))
     if (existing.length) { setInactive(existing); setPhase('done') }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])
 
   async function startScan() {
     if (!latestSnapshot) return

@@ -203,7 +203,6 @@ export default function DashboardPage() {
                     sub={formatDate(item.followed_at || item.event_ts)}
                     badge={b.label}
                     badgeColor={b.color}
-                    onClick={() => {}}
                   />
                 )
               })}
@@ -230,7 +229,6 @@ export default function DashboardPage() {
                 sub={formatDate(item.followed_at)}
                 badge={null}
                 badgeColor="var(--text-3)"
-                onClick={() => {}}
               />
             ))
           )}
