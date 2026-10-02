@@ -1,7 +1,8 @@
-// Only null (not yet checked), active_public or unknown (couldn't be verified)
-// pass through. Excludes deleted and private_or_inactive.
+// Only null (not yet checked) or active_public pass through.
+// Excludes deleted, private_or_inactive and unknown (unverifiable accounts are
+// almost always deleted/deactivated, so they must not inflate the lists).
 function isVisible(status) {
-  return status == null || status === 'active_public' || status === 'unknown'
+  return status == null || status === 'active_public'
 }
 
 // ── Diff engine ────────────────────────────────────────────────────────────────

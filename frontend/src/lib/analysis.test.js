@@ -50,9 +50,9 @@ describe('getPendingSent', () => {
 })
 
 describe('unknown status', () => {
-  it('stays visible in lists (never treated as ghost)', () => {
-    expect(getNotFollowingBack(curr, { x: 'unknown' }).map(i => i.username)).toEqual(['a', 'x', 'y'])
-    expect(getFollowingList(curr, { x: 'unknown' }).map(i => i.username)).toEqual(['a', 'x', 'y'])
+  it('is hidden from lists like deleted/deactivated accounts', () => {
+    expect(getNotFollowingBack(curr, { x: 'unknown' }).map(i => i.username)).toEqual(['a', 'y'])
+    expect(getFollowingList(curr, { x: 'unknown' }).map(i => i.username)).toEqual(['a', 'y'])
   })
 })
 
