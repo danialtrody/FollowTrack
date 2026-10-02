@@ -1,5 +1,9 @@
 import JSZip from 'jszip'
 
+const MAX_ZIP_BYTES = 200 * 1024 * 1024
+
+export class ZipFormatError extends Error {}
+
 function epochToISO(ts) {
   if (ts == null) return null
   try { return new Date(parseInt(ts, 10) * 1000).toISOString() }
@@ -60,6 +64,9 @@ async function sha256hex(buf) {
 }
 
 export async function parseZip(file) {
+  if (file.size > MAX_ZIP_BYTES) {
+    throw new ZipFormatError('This file is too large to be a followers export (max 200 MB).')
+  }
   const arrayBuffer = await file.arrayBuffer()
   const [fileHash, zip] = await Promise.all([
     sha256hex(arrayBuffer),
@@ -97,6 +104,13 @@ export async function parseZip(file) {
 
   const requestsFile    = names.find(n => n.endsWith('recent_follow_requests.json'))
   const received_requests = requestsFile ? parseLabelValuesFile(await readJson(requestsFile) || []) : []
+
+  if (!followers.length && !following.length) {
+    const isHtml = names.some(n => /followers_\d+\.html$|following\.html$/.test(n.split('/').pop()))
+    throw new ZipFormatError(isHtml
+      ? 'This export is in HTML format. Request it again and choose JSON format.'
+      : 'No followers or following found in this ZIP. Make sure you selected "Followers and following" in JSON format.')
+  }
 
   // Auto-tag deleted accounts (Instagram renames them to __deleted__*)
   const tagDeleted = users => users.map(u => ({

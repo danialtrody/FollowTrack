@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import JSZip from 'jszip'
-import { parseZip } from './parseZip'
+import { parseZip, ZipFormatError } from './parseZip'
 
 async function makeZip(files) {
   const zip = new JSZip()
@@ -36,6 +36,7 @@ describe('parseZip', () => {
 
   it('parses pending follow requests from label_values', async () => {
     const file = await makeZip({
+      'connections/followers_and_following/followers_1.json': [follower('someone')],
       'connections/followers_and_following/pending_follow_requests.json': [
         { timestamp: 1700000000, label_values: [{ label: 'Username', value: 'Frank' }] },
       ],
@@ -51,5 +52,21 @@ describe('parseZip', () => {
     const r = await parseZip(file)
     expect(r.followers.find(f => f.username === '__deleted__123')._deleted).toBe(true)
     expect(r.followers.find(f => f.username === 'gina')._deleted).toBe(false)
+  })
+
+  it('rejects a ZIP without followers or following', async () => {
+    const file = await makeZip({ 'readme.json': {} })
+    await expect(parseZip(file)).rejects.toThrow(ZipFormatError)
+  })
+
+  it('explains when the export is in HTML format', async () => {
+    const zip = new JSZip()
+    zip.file('connections/followers_and_following/followers_1.html', '<html></html>')
+    const buf = await zip.generateAsync({ type: 'arraybuffer' })
+    await expect(parseZip({ arrayBuffer: async () => buf })).rejects.toThrow(/HTML format/)
+  })
+
+  it('rejects oversized files', async () => {
+    await expect(parseZip({ size: 300 * 1024 * 1024 })).rejects.toThrow(/too large/)
   })
 })
