@@ -4,7 +4,6 @@ import { authMe, authLogin, authRegister, authLogout, setUnauthorizedHandler } f
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-  // undefined = still checking the session, null = signed out
   const [user, setUser] = useState(undefined)
 
   useEffect(() => {
@@ -23,7 +22,7 @@ export function AuthProvider({ children }) {
   }, [])
 
   const logout = useCallback(async () => {
-    try { await authLogout() } catch { /* cookie expires on its own */ }
+    try { await authLogout() } catch {}
     setUser(null)
   }, [])
 

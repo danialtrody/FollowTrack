@@ -20,6 +20,7 @@ export default function UploadPage() {
   const [message, setMessage] = useState('')
   const [upload,  setUpload]  = useState(null)
   const [scan,    setScan]    = useState(null)
+  const [scanNote, setScanNote] = useState('')
   const inputRef = useRef()
   const pollRef  = useRef()
   const navigate = useNavigate()
@@ -29,7 +30,7 @@ export default function UploadPage() {
     try {
       const { data } = await getCheckStatus(jobId)
       setScan({ ...data })
-      if (['done', 'error', 'cancelled'].includes(data.status)) {
+      if (['done', 'error'].includes(data.status)) {
         clearInterval(pollRef.current)
         if (data.results) updateStatuses(data.results)
         setPhase('success')
@@ -47,6 +48,7 @@ export default function UploadPage() {
     setMessage('')
     setUpload(null)
     setScan(null)
+    setScanNote('')
   }
 
   async function handleClearHistory() {
@@ -70,8 +72,6 @@ export default function UploadPage() {
       const parsed   = await parseZip(file)
       const snapshot = await addSnapshot(parsed)
 
-      // An older export goes into the history only — it must not overwrite the current
-      // account statuses or trigger a scan of outdated lists
       if (latestSnapshot && parsed.exported_at < (latestSnapshot.exported_at ?? latestSnapshot.uploaded_at)) {
         setScanNote('This export is older than your latest one, so it was saved to your history only. Your current data is unchanged.')
         setUpload({ snapshot: { followers_count: latestSnapshot.followers_count, following_count: latestSnapshot.following_count } })
@@ -95,7 +95,7 @@ export default function UploadPage() {
         try {
           const { data: jobData } = await startCheck(nonMutual)
           scanJobId = jobData.job_id
-        } catch { /* backend unavailable — not fatal */ }
+        } catch {}
       }
 
       setUpload({
@@ -125,7 +125,6 @@ export default function UploadPage() {
       <div className="page-scroll scroll-area">
         <div className="page-inner">
 
-          {/* ── Hero ── */}
           <div className="fade-up" style={{ marginBottom: 28, paddingTop: 8 }}>
             <h1 style={{ marginBottom: 10 }}>
               Analyze Your<br />
@@ -138,7 +137,6 @@ export default function UploadPage() {
             </p>
           </div>
 
-          {/* ── Drop zone ── */}
           {(phase === 'idle' || phase === 'dragging') && (
             <div className="fade-up stagger" style={{ animationDelay: '60ms', marginBottom: 20 }}>
               <div
@@ -180,7 +178,6 @@ export default function UploadPage() {
             </div>
           )}
 
-          {/* ── Uploading / parsing ── */}
           {phase === 'uploading' && (
             <div className="fade-up" style={{ marginBottom: 20 }}>
               <div style={{
@@ -200,7 +197,6 @@ export default function UploadPage() {
             </div>
           )}
 
-          {/* ── Scanning ── */}
           {phase === 'scanning' && (
             <div className="fade-up" style={{ marginBottom: 20 }}>
               <div style={{
@@ -233,14 +229,12 @@ export default function UploadPage() {
             </div>
           )}
 
-          {/* ── Success ── */}
           {phase === 'success' && upload && (
             <div className="fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 20 }}>
               <div className="result-card" style={{
                 background: 'linear-gradient(135deg, rgba(52,211,153,0.08) 0%, rgba(5,150,105,0.05) 100%)',
                 border: '1px solid rgba(52,211,153,0.25)',
               }}>
-                {/* Header */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <div style={{
                     width: 36, height: 36, borderRadius: 11,
@@ -257,7 +251,6 @@ export default function UploadPage() {
                   </div>
                 </div>
 
-                {/* Stats */}
                 <div style={{ display: 'flex', gap: 10 }}>
                   <div className="pill-stat" style={{ background: 'rgba(52,211,153,0.1)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(52,211,153,0.18)' }}>
                     <span className="pill-stat-value" style={{ color: 'var(--success)' }}>
@@ -273,7 +266,10 @@ export default function UploadPage() {
                   </div>
                 </div>
 
-                {/* Scan summary */}
+                {scanNote && (
+                  <p style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.5 }}>{scanNote}</p>
+                )}
+
                 {scan && scan.status === 'done' && (
                   <div style={{
                     display: 'flex', gap: 8, flexWrap: 'wrap',
@@ -302,7 +298,6 @@ export default function UploadPage() {
             </div>
           )}
 
-          {/* ── Error ── */}
           {phase === 'error' && (
             <div className="fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 20 }}>
               <div className="result-card" style={{
@@ -327,7 +322,6 @@ export default function UploadPage() {
             </div>
           )}
 
-          {/* ── How-to guide ── */}
           {phase === 'idle' && (
             <div className="fade-up" style={{ animationDelay: '120ms' }}>
               <div style={{

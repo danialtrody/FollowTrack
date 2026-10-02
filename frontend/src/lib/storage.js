@@ -1,4 +1,3 @@
-// Read-only access to data saved on this device before accounts existed (used for the one-time import).
 
 const DB_NAME = 'followtrack'
 const STORE   = 'kv'
@@ -35,5 +34,5 @@ export async function loadState() {
 
 export async function clearState() {
   try { await run('readwrite', s => s.delete(KEY)) }
-  catch { /* ignore */ }
+  catch {}
 }

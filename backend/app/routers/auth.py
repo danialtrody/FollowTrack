@@ -9,7 +9,6 @@ from ..models import User
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-# Verified against when the email is unknown, so login timing doesn't reveal which emails exist
 _DUMMY_HASH = hash_password("not-a-real-password")
 
 

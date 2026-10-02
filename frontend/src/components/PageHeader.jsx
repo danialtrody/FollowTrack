@@ -6,7 +6,6 @@ export default function PageHeader({ title, back, right, showLogo }) {
 
   return (
     <header className="page-header">
-      {/* Left slot */}
       {back ? (
         <button
           onClick={() => navigate(-1)}
@@ -39,7 +38,6 @@ export default function PageHeader({ title, back, right, showLogo }) {
         <div style={{ width: 38 }} />
       )}
 
-      {/* Center title — hidden when logo is shown */}
       {!showLogo && (
         <h1 style={{ fontSize: 16, fontWeight: 700, letterSpacing: '-0.3px', color: 'var(--text)' }}>
           {title}
@@ -47,7 +45,6 @@ export default function PageHeader({ title, back, right, showLogo }) {
       )}
       {showLogo && <div />}
 
-      {/* Right slot */}
       <div style={{ width: 38, display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
         {right || null}
       </div>
